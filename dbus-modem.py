@@ -1,21 +1,22 @@
 #! /usr/bin/python
 
-from dbus.mainloop.glib import DBusGMainLoop
-import gobject
-import dbus
 import os
-import serial
 import sys
 import threading
+import serial
+import gobject
+import dbus
+import dbus.mainloop.glib
 from vedbus import VeDbusService
 
 class Modem(threading.Thread):
-    def __init__(self, dbus, dev, rate):
+    def __init__(self, dbussvc, dev, rate):
         threading.Thread.__init__(self)
-        self.dbus = dbus
+        self.dbus = dbussvc
         self.lock = threading.Lock()
         self.ser = serial.Serial(dev, rate)
         self.cmds = []
+        self.lastcmd = None
         self.ready = True
         self.roaming = False
 
@@ -116,10 +117,10 @@ class Modem(threading.Thread):
         return True
 
 class ModemControl(dbus.service.Object):
-    def __init__(self, modem, svc, path):
-        dbus.service.Object.__init__(self, svc.dbusconn, path)
+    def __init__(self, modem, dbussvc, path):
+        dbus.service.Object.__init__(self, dbussvc.dbusconn, path)
         self.modem = modem
-        self.dbus = svc
+        self.dbus = dbussvc
 
     @dbus.service.method('com.victronenergy.ModemControl', out_signature='b')
     def Connect(self):
@@ -140,7 +141,7 @@ def main(argv):
 
     gobject.threads_init()
     dbus.mainloop.glib.threads_init()
-    DBusGMainLoop(set_as_default=True)
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     svc = VeDbusService('com.victronenergy.modem')
 
