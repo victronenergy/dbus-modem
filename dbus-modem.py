@@ -21,9 +21,16 @@ class Modem(threading.Thread):
         self.roaming = False
 
     def send(self, cmd):
+        global mainloop
+
         self.lastcmd = cmd
         self.ready = False
-        self.ser.write('\r' + cmd + '\r')
+
+        try:
+            self.ser.write('\r' + cmd + '\r')
+        except serial.SerialException:
+            print('Write error, quitting')
+            mainloop.quit()
 
     def cmd(self, cmd):
         self.lock.acquire()
@@ -74,6 +81,8 @@ class Modem(threading.Thread):
             return
 
     def run(self):
+        global mainloop
+
         self.cmd('ATE0')
         self.cmd('AT+CGMM')
         self.cmd('AT+CGSN')
@@ -85,7 +94,13 @@ class Modem(threading.Thread):
                 self.send(self.cmds.pop(0))
             self.lock.release()
 
-            line = self.ser.readline().strip()
+            try:
+                line = self.ser.readline().strip()
+            except serial.SerialException:
+                print('Read error, quitting')
+                mainloop.quit()
+                break
+
             if not line:
                 continue
 
@@ -136,6 +151,8 @@ class ModemControl(dbus.service.Object):
         os.system('poff')
 
 def main(argv):
+    global mainloop
+
     if len(argv) != 1:
         exit(1)
 
