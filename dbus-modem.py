@@ -139,6 +139,11 @@ def main(argv):
     if len(argv) != 1:
         exit(1)
 
+    tty = argv[0]
+    rate = 115200
+
+    print('Starting dbus-modem on %s at %d bps' % (tty, rate))
+
     gobject.threads_init()
     dbus.mainloop.glib.threads_init()
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -158,7 +163,7 @@ def main(argv):
     # settings
     svc.add_path('/RoamingPermitted', False, writeable=True)
 
-    modem = Modem(svc, argv[0], 115200)
+    modem = Modem(svc, tty, rate)
     modem.daemon = True
     modem.start()
 
