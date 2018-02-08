@@ -190,6 +190,8 @@ def main(argv):
     dbus.mainloop.glib.threads_init()
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
+    mainloop = gobject.MainLoop()
+
     svc = VeDbusService('com.victronenergy.modem')
 
     # status
@@ -213,7 +215,6 @@ def main(argv):
 
     ModemControl(modem, svc, '/Control')
 
-    mainloop = gobject.MainLoop()
     mainloop.run()
 
 main(sys.argv[1:])
