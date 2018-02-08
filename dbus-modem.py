@@ -22,6 +22,8 @@ class Modem(threading.Thread):
         self.roaming = False
         self.wdog = 0
 
+        self.modem_wait()
+
     def send(self, cmd):
         global mainloop
 
@@ -39,6 +41,19 @@ class Modem(threading.Thread):
             if self.ready and not self.cmds:
                 self.send(cmds.pop(0))
             self.cmds += cmds
+
+    def modem_wait(self):
+        self.ser.timeout = 5
+
+        while True:
+            line = self.ser.readline()
+            if not line:
+                break
+            line = line.strip()
+            if line == 'PB DONE':
+                break
+
+        self.ser.timeout = None
 
     def modem_init(self):
         self.cmd([
