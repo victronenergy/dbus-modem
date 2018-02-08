@@ -34,11 +34,10 @@ class Modem(threading.Thread):
             mainloop.quit()
 
     def cmd(self, cmds):
-        self.lock.acquire()
-        if self.ready and not self.cmds:
-            self.send(cmds.pop(0))
-        self.cmds += cmds
-        self.lock.release()
+        with self.lock:
+            if self.ready and not self.cmds:
+                self.send(cmds.pop(0))
+            self.cmds += cmds
 
     def modem_init(self):
         self.cmd([
@@ -116,10 +115,9 @@ class Modem(threading.Thread):
         self.wdog_init()
 
         while True:
-            self.lock.acquire()
-            if self.ready and self.cmds:
-                self.send(self.cmds.pop(0))
-            self.lock.release()
+            with self.lock:
+                if self.ready and self.cmds:
+                    self.send(self.cmds.pop(0))
 
             try:
                 line = self.ser.readline().strip()
