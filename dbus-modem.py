@@ -19,6 +19,7 @@ class Modem(threading.Thread):
         self.lastcmd = None
         self.ready = True
         self.roaming = False
+        self.wdog = 0
 
     def send(self, cmd):
         global mainloop
@@ -56,6 +57,17 @@ class Modem(threading.Thread):
             'AT+CGACT?',
             'AT+CGPADDR',
         ])
+
+    def wdog_init(self):
+        self.cmd([
+            'AT+CGFUNC=14,0',
+            'AT+CGDRT=40,1,0',
+            'AT+CGSETV=40,1,0',
+        ])
+
+    def wdog_update(self):
+        self.cmd(['AT+CGSETV=40,%d,0' % self.wdog])
+        self.wdog ^= 1
 
     def handle_resp(self, cmd, resp):
         if cmd == '+CGMM':
@@ -101,6 +113,7 @@ class Modem(threading.Thread):
         global mainloop
 
         self.modem_init()
+        self.wdog_init()
 
         while True:
             self.lock.acquire()
@@ -136,8 +149,9 @@ class Modem(threading.Thread):
             except:
                 pass
 
-    def update_status(self):
+    def update(self):
         self.modem_update()
+        self.wdog_update()
         return True
 
 class ModemControl(dbus.service.Object):
@@ -193,7 +207,7 @@ def main(argv):
     modem.daemon = True
     modem.start()
 
-    gobject.timeout_add(5000, modem.update_status)
+    gobject.timeout_add(5000, modem.update)
 
     ModemControl(modem, svc, '/Control')
 
