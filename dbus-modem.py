@@ -32,12 +32,11 @@ class Modem(threading.Thread):
             print('Write error, quitting')
             mainloop.quit()
 
-    def cmd(self, cmd):
+    def cmd(self, cmds):
         self.lock.acquire()
-        if self.ready:
-            self.send(cmd)
-        else:
-            self.cmds.append(cmd)
+        if self.ready and not self.cmds:
+            self.send(cmds.pop(0))
+        self.cmds += cmds
         self.lock.release()
 
     def handle_resp(self, cmd, resp):
@@ -83,10 +82,12 @@ class Modem(threading.Thread):
     def run(self):
         global mainloop
 
-        self.cmd('ATE0')
-        self.cmd('AT+CGMM')
-        self.cmd('AT+CGSN')
-        self.cmd('AT+CGPS=1')
+        self.cmd([
+            'ATE0',
+            'AT+CGMM',
+            'AT+CGSN',
+            'AT+CGPS=1',
+        ])
 
         while True:
             self.lock.acquire()
@@ -123,12 +124,14 @@ class Modem(threading.Thread):
                 pass
 
     def update_status(self):
-        self.cmd('AT+CREG?')
-        self.cmd('AT+COPS?')
-        self.cmd('AT*CNTI?')
-        self.cmd('AT+CSQ')
-        self.cmd('AT+CGACT?')
-        self.cmd('AT+CGPADDR')
+        self.cmd([
+            'AT+CREG?',
+            'AT+COPS?',
+            'AT*CNTI?',
+            'AT+CSQ',
+            'AT+CGACT?',
+            'AT+CGPADDR',
+        ])
         return True
 
 class ModemControl(dbus.service.Object):
