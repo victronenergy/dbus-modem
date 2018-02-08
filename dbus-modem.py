@@ -18,6 +18,7 @@ class Modem(threading.Thread):
         self.cmds = []
         self.lastcmd = None
         self.ready = True
+        self.running = False
         self.roaming = False
         self.wdog = 0
 
@@ -114,6 +115,8 @@ class Modem(threading.Thread):
         self.modem_init()
         self.wdog_init()
 
+        self.running = True
+
         while True:
             with self.lock:
                 if self.ready and self.cmds:
@@ -148,8 +151,9 @@ class Modem(threading.Thread):
                 pass
 
     def update(self):
-        self.modem_update()
-        self.wdog_update()
+        if self.running:
+            self.modem_update()
+            self.wdog_update()
         return True
 
 class ModemControl(dbus.service.Object):
