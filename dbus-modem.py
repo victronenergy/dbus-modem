@@ -39,6 +39,24 @@ class Modem(threading.Thread):
         self.cmds += cmds
         self.lock.release()
 
+    def modem_init(self):
+        self.cmd([
+            'ATE0',
+            'AT+CGMM',
+            'AT+CGSN',
+            'AT+CGPS=1',
+        ])
+
+    def modem_update(self):
+        self.cmd([
+            'AT+CREG?',
+            'AT+COPS?',
+            'AT*CNTI?',
+            'AT+CSQ',
+            'AT+CGACT?',
+            'AT+CGPADDR',
+        ])
+
     def handle_resp(self, cmd, resp):
         if cmd == '+CGMM':
             self.dbus['/Model'] = resp
@@ -82,12 +100,7 @@ class Modem(threading.Thread):
     def run(self):
         global mainloop
 
-        self.cmd([
-            'ATE0',
-            'AT+CGMM',
-            'AT+CGSN',
-            'AT+CGPS=1',
-        ])
+        self.modem_init()
 
         while True:
             self.lock.acquire()
@@ -124,14 +137,7 @@ class Modem(threading.Thread):
                 pass
 
     def update_status(self):
-        self.cmd([
-            'AT+CREG?',
-            'AT+COPS?',
-            'AT*CNTI?',
-            'AT+CSQ',
-            'AT+CGACT?',
-            'AT+CGPADDR',
-        ])
+        self.modem_update()
         return True
 
 class ModemControl(dbus.service.Object):
