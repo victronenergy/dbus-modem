@@ -137,6 +137,7 @@ class Modem(object):
 
         self.modem_wait()
         self.modem_init()
+        self.modem_update()
         self.wdog_init()
 
         self.running = True
