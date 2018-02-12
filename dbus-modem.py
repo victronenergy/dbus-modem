@@ -19,6 +19,7 @@ class Modem(object):
     def __init__(self, dbussvc, dev, rate):
         self.dbus = dbussvc
         self.lock = threading.Lock()
+        self.cv = threading.Condition(self.lock)
         self.thread = None
         self.ser = None
         self.dev = dev
@@ -140,12 +141,13 @@ class Modem(object):
         self.modem_update()
         self.wdog_init()
 
-        self.running = True
-
         while True:
-            with self.lock:
+            with self.cv:
                 if self.ready and self.cmds:
                     self.send(self.cmds.pop(0))
+                    if not self.cmds:
+                        self.running = True
+                        self.cv.notify()
 
             try:
                 line = self.ser.readline().strip()
@@ -210,6 +212,10 @@ class Modem(object):
 
         self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
                                        self.setting_changed, timeout=10)
+
+        with self.cv:
+            while not self.running:
+                self.cv.wait()
 
     def update(self):
         if self.running:
