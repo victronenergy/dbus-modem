@@ -8,6 +8,12 @@ import gobject
 import dbus
 import dbus.mainloop.glib
 from vedbus import VeDbusService
+from settingsdevice import SettingsDevice
+
+modem_settings = {
+    'connect': ['/Settings/Modem/Connect', 1, 0, 1],
+    'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
+}
 
 class Modem(object):
     def __init__(self, dbussvc, dev, rate):
@@ -21,7 +27,8 @@ class Modem(object):
         self.lastcmd = None
         self.ready = True
         self.running = False
-        self.roaming = False
+        self.roaming = None
+        self.connected = False
         self.wdog = 0
 
     def send(self, cmd):
@@ -114,7 +121,8 @@ class Modem(object):
             return
 
         if cmd == '+CGACT':
-            self.dbus['/Connected'] = int(v[1])
+            self.connected = int(v[1])
+            self.dbus['/Connected'] = self.connected
             return
 
         if cmd == '+CGPADDR':
@@ -166,6 +174,32 @@ class Modem(object):
             except:
                 pass
 
+    def connect(self):
+        if self.connected:
+            return
+
+        if not self.roaming or self.settings['roaming']:
+            os.system('pon')
+
+    def disconnect(self):
+        if not self.connected:
+            return
+
+        os.system('poff')
+
+    def setting_changed(self, setting, old, new):
+        if setting == 'connect':
+            if new:
+                self.connect()
+            else:
+                self.disconnect()
+            return
+
+        if setting == 'roaming':
+            if self.connected and not new:
+                self.disconnect()
+            return
+
     def start(self):
         self.ser = serial.Serial(self.dev, self.rate)
 
@@ -173,30 +207,14 @@ class Modem(object):
         self.thread.daemon = True
         self.thread.start()
 
+        self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
+                                       self.setting_changed, timeout=10)
+
     def update(self):
         if self.running:
             self.modem_update()
             self.wdog_update()
         return True
-
-class ModemControl(dbus.service.Object):
-    def __init__(self, modem, dbussvc, path):
-        dbus.service.Object.__init__(self, dbussvc.dbusconn, path)
-        self.modem = modem
-        self.dbus = dbussvc
-
-    @dbus.service.method('com.victronenergy.ModemControl', out_signature='b')
-    def Connect(self):
-        if self.modem.roaming and not self.dbus['/RoamingPermitted']:
-            return False
-
-        err = os.system('pon')
-
-        return err == 0
-
-    @dbus.service.method('com.victronenergy.ModemControl')
-    def Disconnect(self):
-        os.system('poff')
 
 def main(argv):
     global mainloop
@@ -217,7 +235,6 @@ def main(argv):
 
     svc = VeDbusService('com.victronenergy.modem')
 
-    # status
     svc.add_path('/Model', None)
     svc.add_path('/IMEI', None)
     svc.add_path('/NetworkName', None)
@@ -227,16 +244,10 @@ def main(argv):
     svc.add_path('/Connected', None)
     svc.add_path('/IP', None)
 
-    # settings
-    svc.add_path('/RoamingPermitted', False, writeable=True)
-
     modem = Modem(svc, tty, rate)
     modem.start()
 
     gobject.timeout_add(5000, modem.update)
-
-    ModemControl(modem, svc, '/Control')
-
     mainloop.run()
 
 main(sys.argv[1:])
