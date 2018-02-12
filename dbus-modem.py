@@ -9,20 +9,20 @@ import dbus
 import dbus.mainloop.glib
 from vedbus import VeDbusService
 
-class Modem(threading.Thread):
+class Modem(object):
     def __init__(self, dbussvc, dev, rate):
-        threading.Thread.__init__(self)
         self.dbus = dbussvc
         self.lock = threading.Lock()
-        self.ser = serial.Serial(dev, rate)
+        self.thread = None
+        self.ser = None
+        self.dev = dev
+        self.rate = rate
         self.cmds = []
         self.lastcmd = None
         self.ready = True
         self.running = False
         self.roaming = False
         self.wdog = 0
-
-        self.modem_wait()
 
     def send(self, cmd):
         global mainloop
@@ -127,6 +127,7 @@ class Modem(threading.Thread):
     def run(self):
         global mainloop
 
+        self.modem_wait()
         self.modem_init()
         self.wdog_init()
 
@@ -164,6 +165,13 @@ class Modem(threading.Thread):
                 self.handle_resp(cmd, resp)
             except:
                 pass
+
+    def start(self):
+        self.ser = serial.Serial(self.dev, self.rate)
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
 
     def update(self):
         if self.running:
@@ -223,7 +231,6 @@ def main(argv):
     svc.add_path('/RoamingPermitted', False, writeable=True)
 
     modem = Modem(svc, tty, rate)
-    modem.daemon = True
     modem.start()
 
     gobject.timeout_add(5000, modem.update)
