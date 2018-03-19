@@ -27,22 +27,30 @@ class Modem(object):
         self.cmds = []
         self.lastcmd = None
         self.ready = True
-        self.running = False
+        self.running = None
         self.roaming = None
         self.connected = False
         self.wdog = 0
 
-    def send(self, cmd):
+    def error(self, msg):
         global mainloop
 
+        print('%s, quitting' % msg)
+
+        mainloop.quit()
+
+        with self.cv:
+            self.running = False
+            self.cv.notify()
+
+    def send(self, cmd):
         self.lastcmd = cmd
         self.ready = False
 
         try:
             self.ser.write('\r' + cmd + '\r')
         except serial.SerialException:
-            print('Write error, quitting')
-            mainloop.quit()
+            self.error('Write error')
 
     def cmd(self, cmds):
         with self.lock:
@@ -51,17 +59,25 @@ class Modem(object):
             self.cmds += cmds
 
     def modem_wait(self):
-        self.ser.timeout = 5
+        try:
+            self.ser.timeout = 5
 
-        while True:
-            line = self.ser.readline()
-            if not line:
-                break
-            line = line.strip()
-            if line == 'PB DONE':
-                break
+            while True:
+                line = self.ser.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if line == 'PB DONE':
+                    break
 
-        self.ser.timeout = None
+            self.ser.timeout = None
+
+        except serial.SerialException:
+            self.error('Setup error')
+            return False
+
+        return True
+
 
     def modem_init(self):
         self.cmd([
@@ -134,9 +150,9 @@ class Modem(object):
             return
 
     def run(self):
-        global mainloop
+        if not self.modem_wait():
+            return
 
-        self.modem_wait()
         self.modem_init()
         self.modem_update()
         self.wdog_init()
@@ -152,8 +168,7 @@ class Modem(object):
             try:
                 line = self.ser.readline().strip()
             except serial.SerialException:
-                print('Read error, quitting')
-                mainloop.quit()
+                self.error('Read error')
                 break
 
             if not line:
@@ -210,12 +225,21 @@ class Modem(object):
         self.thread.daemon = True
         self.thread.start()
 
+        print('Waiting for localsettings')
         self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
                                        self.setting_changed, timeout=10)
 
+        print('Waiting for modem to become ready')
         with self.cv:
-            while not self.running:
+            while self.running == None:
                 self.cv.wait()
+
+        if self.running:
+            print('Modem ready')
+        else:
+            print('Modem setup failed')
+
+        return self.running
 
     def update(self):
         if self.running:
@@ -252,7 +276,8 @@ def main(argv):
     svc.add_path('/IP', None)
 
     modem = Modem(svc, tty, rate)
-    modem.start()
+    if not modem.start():
+        return
 
     gobject.timeout_add(5000, modem.update)
     mainloop.run()
