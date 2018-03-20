@@ -207,6 +207,9 @@ class Modem(object):
         os.system('poff')
 
     def setting_changed(self, setting, old, new):
+        if not self.running:
+            return
+
         if setting == 'connect':
             if new:
                 self.connect()
@@ -237,6 +240,8 @@ class Modem(object):
 
         if self.running:
             print('Modem ready')
+            if self.settings['connect']:
+                self.connect()
         else:
             print('Modem setup failed')
 
