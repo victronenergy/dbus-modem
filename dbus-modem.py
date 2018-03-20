@@ -38,6 +38,7 @@ class Modem(object):
         print('%s, quitting' % msg)
 
         mainloop.quit()
+        self.disconnect()
 
         with self.cv:
             self.running = False
