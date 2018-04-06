@@ -221,7 +221,6 @@ class Modem(object):
         self.ser = serial.Serial(self.dev, self.rate)
 
         self.thread = threading.Thread(target=self.run)
-        self.thread.daemon = True
         self.thread.start()
 
         print('Waiting for localsettings')
