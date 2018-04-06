@@ -15,6 +15,8 @@ modem_settings = {
     'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
 }
 
+WDOG_GPIO = 44
+
 class Modem(object):
     def __init__(self, dbussvc, dev, rate):
         self.dbus = dbussvc
@@ -100,13 +102,12 @@ class Modem(object):
 
     def wdog_init(self):
         self.cmd([
-            'AT+CGFUNC=14,0',
-            'AT+CGDRT=40,1,0',
-            'AT+CGSETV=40,1,0',
+            'AT+CGDRT=%d,1,0' % WDOG_GPIO,
+            'AT+CGSETV=%d,1,0' % WDOG_GPIO,
         ])
 
     def wdog_update(self):
-        self.cmd(['AT+CGSETV=40,%d,0' % self.wdog])
+        self.cmd(['AT+CGSETV=%d,%d,0' % (WDOG_GPIO, self.wdog)])
         self.wdog ^= 1
 
     def handle_resp(self, cmd, resp):
