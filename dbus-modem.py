@@ -195,17 +195,11 @@ class Modem(object):
                 pass
 
     def connect(self):
-        if self.connected:
-            return
-
         if not self.roaming or self.settings['roaming']:
-            os.system('pon')
+            os.system('svc -u /service/ppp')
 
     def disconnect(self):
-        if not self.connected:
-            return
-
-        os.system('poff')
+        os.system('svc -d /service/ppp')
 
     def setting_changed(self, setting, old, new):
         if not self.running:
