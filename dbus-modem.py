@@ -128,6 +128,7 @@ class Modem(object):
         if cmd == '+CREG':
             self.roaming = int(v[1]) == 5
             self.dbus['/Roaming'] = self.roaming
+            self.update_roaming()
             return
 
         if cmd == '+COPS':
@@ -201,6 +202,13 @@ class Modem(object):
     def disconnect(self):
         os.system('svc -d /service/ppp')
 
+    def update_roaming(self):
+        if self.settings['connect']:
+            if self.roaming and not self.settings['roaming']:
+                self.disconnect()
+            elif not self.connected():
+                self.connect()
+
     def setting_changed(self, setting, old, new):
         if not self.running:
             return
@@ -213,8 +221,7 @@ class Modem(object):
             return
 
         if setting == 'roaming':
-            if self.connected and not new:
-                self.disconnect()
+            self.update_roaming()
             return
 
     def start(self):
