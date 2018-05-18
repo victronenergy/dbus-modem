@@ -41,3 +41,22 @@ as well as serial-starter in meta-victronenergy-private, for details.
 A fix in the kernel is required, see the commits titled `USB: serial: option: blacklist sendsetup on
 SIM5218` in the various machine branches on https://github.com/victronenergy/linux. And see also 
 [venus-private/wiki/kernel-config](https://github.com/victronenergy/venus-private/wiki/kernel-config).
+
+### Preparation in the factory
+The Simcom modules on our GX GSM are preprogrammed in the factory.
+
+```
+# change direction and default value of io pin, and store too eeprom
+at+cgdrt=44,1,1
+at+cgsetv=44,0,1
+
+# disable some special function (FUNC_WAKEUP_HOST) on pin 41
+at+cgfunc=13,0
+
+# change direction and default value of io pin, and store too eeprom
+at+cgdrt=41,1,1
+at+cgsetv=41,0,1
+```
+
+See the [modem chapter in the commandline manual](https://github.com/victronenergy/venus/wiki/commandline-introduction#modem) for how to run those commands from within the Venus shell.
+
