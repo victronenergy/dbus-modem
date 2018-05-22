@@ -163,6 +163,13 @@ class Modem(object):
             self.dbus['/IP'] = ip
             return
 
+    def handle_error(self, cmd, err):
+        v = err.split(': ', 1)
+        if len(v) > 1:
+            err = v[1]
+
+        print('%s: command failed: %s' % (cmd, err))
+
     def run(self):
         if not self.modem_wait():
             return
@@ -188,7 +195,12 @@ class Modem(object):
             if not line:
                 continue
 
-            if line in ['OK', 'ERROR', 'NO CARRIER']:
+            if line == 'ERROR' or line.startswith('+CME ERROR:'):
+                self.handle_error(self.lastcmd.lstrip('AT'), line)
+                self.ready = True
+                continue
+
+            if line in ['OK', 'NO CARRIER']:
                 self.ready = True
                 continue
 
