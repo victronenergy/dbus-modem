@@ -68,7 +68,10 @@ class Modem(object):
             while True:
                 line = self.ser.readline()
                 if not line:
-                    break
+                    self.send('AT+CRESET')
+                    self.error('Timed out')
+                    return False
+
                 line = line.strip()
                 if line == 'PB DONE':
                     break
