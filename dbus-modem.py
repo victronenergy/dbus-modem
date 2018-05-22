@@ -14,6 +14,7 @@ from settingsdevice import SettingsDevice
 modem_settings = {
     'connect': ['/Settings/Modem/Connect', 1, 0, 1],
     'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
+    'pin':     ['/Settings/Modem/PIN', '', 0, 0],
 }
 
 WDOG_GPIO = 44
@@ -33,6 +34,7 @@ class Modem(object):
         self.running = None
         self.roaming = None
         self.connected = False
+        self.sim_status = None
         self.wdog = 0
 
     def error(self, msg):
@@ -79,7 +81,7 @@ class Modem(object):
                 if line == 'PB DONE':
                     break
 
-                if line.startswith('+CME ERROR:'): # no SIM
+                if line.startswith('+CME') or line.startswith('+CPIN'):
                     # without delay here, modem hangs
                     time.sleep(3)
                     break
@@ -99,9 +101,13 @@ class Modem(object):
             'AT+CGMM',
             'AT+CGSN',
             'AT+CGPS=1',
+            'AT+CPIN?',
         ])
 
     def modem_update(self):
+        if self.sim_status != 'READY':
+            return
+
         self.cmd([
             'AT+CREG?',
             'AT+COPS?',
@@ -128,6 +134,15 @@ class Modem(object):
 
         if cmd == '+CGSN':
             self.dbus['/IMEI'] = resp
+            return
+
+        if cmd == '+CPIN':
+            self.sim_status = resp
+            if resp == 'SIM PIN' and self.settings['pin']:
+                pin = self.settings['pin'].encode('ascii', 'ignore')
+                self.cmd(['AT+CPIN=%s' % pin])
+            else:
+                self.dbus['/Status'] = resp
             return
 
         v = resp.split(',')
@@ -169,6 +184,11 @@ class Modem(object):
             err = v[1]
 
         print('%s: command failed: %s' % (cmd, err))
+
+        # clear stored PIN if incorrect
+        if cmd.startswith('+CPIN'):
+            self.dbus['/Status'] = err
+            self.settings['pin'] = ''
 
     def run(self):
         if not self.modem_wait():
@@ -304,6 +324,7 @@ def main(argv):
     svc.add_path('/Roaming', None)
     svc.add_path('/Connected', None)
     svc.add_path('/IP', None)
+    svc.add_path('/Status', None)
 
     modem = Modem(svc, tty, rate)
     if not modem.start():
