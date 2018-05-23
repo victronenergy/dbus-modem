@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import threading
 import serial
 import gobject
@@ -67,13 +68,20 @@ class Modem(object):
 
             while True:
                 line = self.ser.readline()
+
                 if not line:
                     self.send('AT+CRESET')
                     self.error('Timed out')
                     return False
 
                 line = line.strip()
+
                 if line == 'PB DONE':
+                    break
+
+                if line.startswith('+CME ERROR:'): # no SIM
+                    # without delay here, modem hangs
+                    time.sleep(3)
                     break
 
             self.ser.timeout = None
