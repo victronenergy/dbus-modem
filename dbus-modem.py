@@ -175,7 +175,6 @@ class Modem(object):
             return
 
         self.modem_init()
-        self.modem_update()
         self.wdog_init()
 
         while True:
@@ -264,6 +263,7 @@ class Modem(object):
 
         if self.running:
             print('Modem ready')
+            self.modem_update()
             if self.settings['connect']:
                 self.connect()
         else:
