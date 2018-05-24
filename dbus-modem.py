@@ -333,4 +333,7 @@ def main(argv):
     gobject.timeout_add(5000, modem.update)
     mainloop.run()
 
-main(sys.argv[1:])
+try:
+    main(sys.argv[1:])
+except KeyboardInterrupt:
+    os._exit(1)
