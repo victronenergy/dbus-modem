@@ -24,6 +24,23 @@ Path | Description
 /Roaming | currently roaming (0/1)
 /Connected | data link active (0/1)
 /IP | IP address (when connected)
+/SimStatus | status code, see below
+
+The SimStatus value is either (if less than 1000) an error code as
+defined by 3GPP TS 27.007 section 9.2 or (1000 and higher) a status
+code per the table below.
+
+SimStatus | Description
+----------|------------
+10 | SIM not inserted
+11 | SIM PIN required
+12 | SIM PUK required
+13 | SIM failure
+14 | SIM busy
+15 | SIM wrong
+16 | incorrect password
+1000 | ready
+1001 | unknown error
 
 The following localsettings values are used. These are monitored and changes acted upon.
 
@@ -31,6 +48,7 @@ Setting | Description
 --------|------------
 /Settings/Modem/Connect | establish data connection (0/1)
 /Settings/Modem/RoamingPermitted | connect when roaming (0/1)
+/Settings/Modem/PIN | SIM PIN (string)
 
 When the data connection is active, it is configured with a high routing metric. This way, the Linux
 kernel prioritises Ethernet or Wifi when these are available. A dnsmasq proxy forwards DNS lookups
