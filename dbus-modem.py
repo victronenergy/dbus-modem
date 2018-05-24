@@ -1,5 +1,6 @@
 #! /usr/bin/python -u
 
+from enum import Enum
 import os
 import sys
 import time
@@ -18,6 +19,52 @@ modem_settings = {
 }
 
 WDOG_GPIO = 44
+
+class SIM_STATUS(int, Enum):
+    # Error codes defined by 3GPP TS 27.007, section 9.2
+    PH_SIM_PIN      = 5
+    PH_FSIM_PIN     = 6
+    PH_FSIM_PUK     = 7
+    NO_SIM          = 10
+    SIM_PIN         = 11
+    SIM_PUK         = 12
+    SIM_FAIL        = 13
+    SIM_BUSY        = 14
+    SIM_WRONG       = 15
+    BAD_PASSWD      = 16
+    SIM_PIN2        = 17
+    SIM_PUK2        = 18
+    PH_NET_PIN      = 40
+    PH_NET_PUK      = 41
+    PH_NETSUB_PIN   = 42
+    PH_NETSUB_PUK   = 43
+    PH_SP_PIN       = 44
+    PH_SP_PUK       = 45
+    PH_CORP_PIN     = 46
+    PH_CORP_PUK     = 47
+
+    # other codes
+    READY           = 1000
+    ERROR           = 1001
+
+CPIN = {
+    'READY':          SIM_STATUS.READY,
+    'SIM PIN':        SIM_STATUS.SIM_PIN,
+    'SIM PUK':        SIM_STATUS.SIM_PUK,
+    'PH-SIM PIN':     SIM_STATUS.PH_SIM_PIN,
+    'PH-FSIM PIN':    SIM_STATUS.PH_FSIM_PIN,
+    'PH-FSIM PUK':    SIM_STATUS.PH_FSIM_PUK,
+    'SIM PIN2':       SIM_STATUS.SIM_PIN2,
+    'SIM PUK2':       SIM_STATUS.SIM_PUK2,
+    'PH-NET PIN':     SIM_STATUS.PH_NET_PIN,
+    'PH-NET PUK':     SIM_STATUS.PH_NET_PUK,
+    'PH-NETSUB PIN':  SIM_STATUS.PH_NETSUB_PIN,
+    'PH-NETSUB PUK':  SIM_STATUS.PH_NETSUB_PUK,
+    'PH-SP PIN':      SIM_STATUS.PH_SP_PIN,
+    'PH-SP PUK':      SIM_STATUS.PH_SP_PUK,
+    'PH-CORP PIN':    SIM_STATUS.PH_CORP_PIN,
+    'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
+}
 
 class Modem(object):
     def __init__(self, dbussvc, dev, rate):
@@ -101,11 +148,12 @@ class Modem(object):
             'AT+CGMM',
             'AT+CGSN',
             'AT+CGPS=1',
+            'AT+CMEE=1',
             'AT+CPIN?',
         ])
 
     def modem_update(self):
-        if self.sim_status != 'READY':
+        if self.sim_status != SIM_STATUS.READY:
             return
 
         self.cmd([
@@ -137,12 +185,19 @@ class Modem(object):
             return
 
         if cmd == '+CPIN':
-            self.sim_status = resp
-            if resp == 'SIM PIN' and self.settings['pin']:
+            if resp in CPIN:
+                self.sim_status = CPIN[resp]
+            else:
+                self.sim_status = SIM_STATUS.ERROR
+
+            if self.sim_status == SIM_STATUS.SIM_PIN and self.settings['pin']:
+                print('SIM PIN required, sending')
                 pin = self.settings['pin'].encode('ascii', 'ignore')
                 self.cmd(['AT+CPIN=%s' % pin])
-            else:
-                self.dbus['/Status'] = resp
+            elif self.sim_status != SIM_STATUS.READY:
+                print('Unknown PIN required: %s' % resp)
+
+            self.dbus['/SimStatus'] = self.sim_status
             return
 
         v = resp.split(',')
@@ -185,9 +240,15 @@ class Modem(object):
 
         print('%s: command failed: %s' % (cmd, err))
 
+        try:
+            err = int(err)
+        except:
+            pass
+
         # clear stored PIN if incorrect
         if cmd.startswith('+CPIN'):
-            self.dbus['/Status'] = err
+            self.sim_status = err
+            self.dbus['/SimStatus'] = self.sim_status
             self.settings['pin'] = ''
 
     def run(self):
@@ -324,7 +385,7 @@ def main(argv):
     svc.add_path('/Roaming', None)
     svc.add_path('/Connected', None)
     svc.add_path('/IP', None)
-    svc.add_path('/Status', None)
+    svc.add_path('/SimStatus', None)
 
     modem = Modem(svc, tty, rate)
     if not modem.start():
