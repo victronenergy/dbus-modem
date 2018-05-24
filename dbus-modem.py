@@ -245,11 +245,13 @@ class Modem(object):
         except:
             pass
 
-        # clear stored PIN if incorrect
         if cmd.startswith('+CPIN'):
             self.sim_status = err
             self.dbus['/SimStatus'] = self.sim_status
-            self.settings['pin'] = ''
+            # clear stored PIN if incorrect
+            if err == SIM_STATUS.BAD_PASSWD:
+                print('Wrong PIN, clearing stored value')
+                self.settings['pin'] = ''
 
     def run(self):
         if not self.modem_wait():
