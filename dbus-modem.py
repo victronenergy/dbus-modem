@@ -72,9 +72,9 @@ class Modem(object):
                 line = self.ser.readline()
 
                 if not line:
+                    print('Timed out, resetting modem')
                     self.send('AT+CRESET')
-                    self.error('Timed out')
-                    return False
+                    continue
 
                 line = line.strip()
 
