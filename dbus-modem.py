@@ -115,9 +115,17 @@ class Modem(object):
         try:
             self.ser.timeout = 5
 
+            # reset parameters to defaults
+            self.send('AT&F')
+
             while True:
                 line = self.ser.readline()
 
+                # startup chatter complete
+                if not line and self.ready:
+                    break
+
+                # modem not responding, attempt full reset
                 if not line:
                     print('Timed out, resetting modem')
                     self.send('AT+CRESET')
@@ -125,13 +133,9 @@ class Modem(object):
 
                 line = line.strip()
 
-                if line == 'PB DONE':
-                    break
-
-                if line.startswith('+CME') or line.startswith('+CPIN'):
-                    # without delay here, modem hangs
-                    time.sleep(3)
-                    break
+                # reset succeeded
+                if line == 'OK' and self.lastcmd == 'AT&F':
+                    self.ready = True
 
             self.ser.timeout = None
 
@@ -140,7 +144,6 @@ class Modem(object):
             return False
 
         return True
-
 
     def modem_init(self):
         self.cmd([
