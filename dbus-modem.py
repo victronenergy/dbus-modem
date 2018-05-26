@@ -79,8 +79,9 @@ class Modem(object):
         self.lastcmd = None
         self.ready = True
         self.running = None
+        self.registered = None
         self.roaming = None
-        self.connected = False
+        self.ppp = None
         self.sim_status = None
         self.wdog = 0
 
@@ -210,9 +211,20 @@ class Modem(object):
             return
 
         if cmd == '+CREG':
-            self.roaming = int(v[1]) == 5
+            stat = int(v[1])
+
+            if stat == 1:
+                self.registered = True
+                self.roaming = False
+            elif stat == 5:
+                self.registered = True
+                self.roaming = True
+            else:
+                self.registered = False
+                self.roaming = False
+
             self.dbus['/Roaming'] = self.roaming
-            self.update_roaming()
+            self.update_connection()
             return
 
         if cmd == '+COPS':
@@ -225,8 +237,7 @@ class Modem(object):
             return
 
         if cmd == '+CGACT':
-            self.connected = int(v[1])
-            self.dbus['/Connected'] = self.connected
+            self.dbus['/Connected'] = int(v[1])
             return
 
         if cmd == '+CGPADDR':
@@ -304,35 +315,39 @@ class Modem(object):
                 pass
 
     def connect(self):
-        if not self.roaming or self.settings['roaming']:
+        if not self.ppp:
             os.system('svc -u /service/ppp')
+            self.ppp = True
 
     def disconnect(self):
-        os.system('svc -d /service/ppp')
+        if self.ppp != False:
+            os.system('svc -d /service/ppp')
+            self.ppp = False
 
-    def update_roaming(self):
-        if self.settings['connect']:
-            if self.roaming and not self.settings['roaming']:
-                self.disconnect()
-            elif not self.connected():
-                self.connect()
+    def update_connection(self):
+        connect = False
+
+        if self.registered and self.settings['connect']:
+            if not self.roaming or self.settings['roaming']:
+                connect = True
+
+        if connect:
+            self.connect()
+        else:
+            self.disconnect()
 
     def setting_changed(self, setting, old, new):
         if not self.running:
             return
 
-        if setting == 'connect':
-            if new:
-                self.connect()
-            else:
-                self.disconnect()
-            return
-
-        if setting == 'roaming':
-            self.update_roaming()
+        if setting == 'connect' or setting == 'roaming':
+            self.update_connection()
             return
 
     def start(self):
+        # make sure pppd is not running
+        self.disconnect()
+
         self.ser = serial.Serial(self.dev, self.rate)
 
         self.thread = threading.Thread(target=self.run)
@@ -350,8 +365,6 @@ class Modem(object):
         if self.running:
             print('Modem ready')
             self.modem_update()
-            if self.settings['connect']:
-                self.connect()
         else:
             print('Modem setup failed')
 
