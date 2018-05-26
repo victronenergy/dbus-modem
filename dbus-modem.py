@@ -344,6 +344,10 @@ class Modem(object):
             self.update_connection()
             return
 
+        if setting == 'pin':
+            self.cmd(['AT+CPIN'])
+            return
+
     def start(self):
         # make sure pppd is not running
         self.disconnect()
