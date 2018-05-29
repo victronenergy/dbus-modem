@@ -129,7 +129,7 @@ class Modem(object):
                 # modem not responding, attempt full reset
                 if not line:
                     print('Timed out, resetting modem')
-                    self.send('AT+CRESET')
+                    self.send('AT#REBOOT')
                     continue
 
                 line = line.strip()
