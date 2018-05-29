@@ -352,14 +352,14 @@ class Modem(object):
         # make sure pppd is not running
         self.disconnect()
 
+        print('Waiting for localsettings')
+        self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
+                                       self.setting_changed, timeout=10)
+
         self.ser = serial.Serial(self.dev, self.rate)
 
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
-
-        print('Waiting for localsettings')
-        self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
-                                       self.setting_changed, timeout=10)
 
         print('Waiting for modem to become ready')
         with self.cv:
