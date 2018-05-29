@@ -1,5 +1,6 @@
 #! /usr/bin/python -u
 
+from argparse import ArgumentParser
 from enum import Enum
 import os
 import sys
@@ -11,6 +12,9 @@ import dbus
 import dbus.mainloop.glib
 from vedbus import VeDbusService
 from settingsdevice import SettingsDevice
+
+import logging
+log = logging.getLogger()
 
 modem_settings = {
     'connect': ['/Settings/Modem/Connect', 1, 0, 1],
@@ -88,7 +92,7 @@ class Modem(object):
     def error(self, msg):
         global mainloop
 
-        print('%s, quitting' % msg)
+        log.error('%s, quitting' % msg)
 
         mainloop.quit()
         self.disconnect()
@@ -128,7 +132,7 @@ class Modem(object):
 
                 # modem not responding, attempt full reset
                 if not line:
-                    print('Timed out, resetting modem')
+                    log.error('Timed out, resetting modem')
                     self.send('AT#REBOOT')
                     continue
 
@@ -195,11 +199,11 @@ class Modem(object):
                 self.sim_status = SIM_STATUS.ERROR
 
             if self.sim_status == SIM_STATUS.SIM_PIN and self.settings['pin']:
-                print('SIM PIN required, sending')
+                log.info('SIM PIN required, sending')
                 pin = self.settings['pin'].encode('ascii', 'ignore')
                 self.cmd(['AT+CPIN=%s' % pin])
             elif self.sim_status != SIM_STATUS.READY:
-                print('Unknown PIN required: %s' % resp)
+                log.error('Unknown PIN required: %s' % resp)
 
             self.dbus['/SimStatus'] = self.sim_status
             return
@@ -252,7 +256,7 @@ class Modem(object):
         if len(v) > 1:
             err = v[1]
 
-        print('%s: command failed: %s' % (cmd, err))
+        log.error('%s: command failed: %s' % (cmd, err))
 
         try:
             err = int(err)
@@ -264,7 +268,7 @@ class Modem(object):
             self.dbus['/SimStatus'] = self.sim_status
             # clear stored PIN if incorrect
             if err == SIM_STATUS.BAD_PASSWD:
-                print('Wrong PIN, clearing stored value')
+                log.info('Wrong PIN, clearing stored value')
                 self.settings['pin'] = ''
 
     def run(self):
@@ -352,7 +356,7 @@ class Modem(object):
         # make sure pppd is not running
         self.disconnect()
 
-        print('Waiting for localsettings')
+        log.info('Waiting for localsettings')
         self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
                                        self.setting_changed, timeout=10)
 
@@ -361,16 +365,16 @@ class Modem(object):
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
-        print('Waiting for modem to become ready')
+        log.info('Waiting for modem to become ready')
         with self.cv:
             while self.running == None:
                 self.cv.wait()
 
         if self.running:
-            print('Modem ready')
+            log.info('Modem ready')
             self.modem_update()
         else:
-            print('Modem setup failed')
+            log.error('Modem setup failed')
 
         return self.running
 
@@ -380,16 +384,35 @@ class Modem(object):
             self.wdog_update()
         return True
 
-def main(argv):
+def main():
     global mainloop
 
-    if len(argv) != 1:
+    parser = ArgumentParser(description='dbus-modem', add_help=True)
+    parser.add_argument('-d', '--debug', help='enable debug logging',
+                        action='store_true')
+    parser.add_argument('-s', '--serial', help='tty')
+
+    args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)-8s %(message)s',
+                        level=(logging.DEBUG if args.debug else logging.INFO))
+
+    logLevel = {
+        0:  'NOTSET',
+        10: 'DEBUG',
+        20: 'INFO',
+        30: 'WARNING',
+        40: 'ERROR',
+    }
+    log.info('Loglevel set to ' + logLevel[log.getEffectiveLevel()])
+
+    if not args.serial:
+        log.error('No serial port specified, see -h')
         exit(1)
 
-    tty = argv[0]
     rate = 115200
 
-    print('Starting dbus-modem on %s at %d bps' % (tty, rate))
+    log.info('Starting dbus-modem on %s at %d bps' % (args.serial, rate))
 
     gobject.threads_init()
     dbus.mainloop.glib.threads_init()
@@ -409,7 +432,7 @@ def main(argv):
     svc.add_path('/IP', None)
     svc.add_path('/SimStatus', None)
 
-    modem = Modem(svc, tty, rate)
+    modem = Modem(svc, args.serial, rate)
     if not modem.start():
         return
 
@@ -417,6 +440,6 @@ def main(argv):
     mainloop.run()
 
 try:
-    main(sys.argv[1:])
+    main()
 except KeyboardInterrupt:
     os._exit(1)
