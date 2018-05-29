@@ -105,6 +105,7 @@ class Modem(object):
         self.lastcmd = cmd
         self.ready = False
 
+        log.debug('> %s' % cmd)
         try:
             self.ser.write('\r' + cmd + '\r')
         except serial.SerialException:
@@ -137,6 +138,8 @@ class Modem(object):
                     continue
 
                 line = line.strip()
+
+                log.debug('< %s' % line)
 
                 # reset succeeded
                 if line == 'OK' and self.lastcmd == 'AT&F':
@@ -294,6 +297,8 @@ class Modem(object):
 
             if not line:
                 continue
+
+            log.debug('< %s' % line)
 
             if line == 'ERROR' or line.startswith('+CME ERROR:'):
                 self.handle_error(self.lastcmd.lstrip('AT'), line)
