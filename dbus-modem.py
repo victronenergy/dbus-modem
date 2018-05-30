@@ -155,7 +155,6 @@ class Modem(object):
 
     def modem_init(self):
         self.cmd([
-            'ATE0',
             'AT+CGMM',
             'AT+CGSN',
             'AT+CGPS=1',
@@ -299,6 +298,11 @@ class Modem(object):
                 continue
 
             log.debug('< %s' % line)
+
+            if line.startswith('AT'):
+                if line != self.lastcmd:
+                    log.error('Unexpected command echo: %s' % line)
+                continue
 
             if line == 'ERROR' or line.startswith('+CME ERROR:'):
                 self.handle_error(self.lastcmd.lstrip('AT'), line)
