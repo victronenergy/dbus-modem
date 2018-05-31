@@ -229,6 +229,7 @@ class Modem(object):
                 self.registered = False
                 self.roaming = False
 
+            self.dbus['/RegStatus'] = stat
             self.dbus['/Roaming'] = self.roaming
             self.update_connection()
             return
@@ -440,6 +441,7 @@ def main():
     svc.add_path('/Connected', None)
     svc.add_path('/IP', None)
     svc.add_path('/SimStatus', None)
+    svc.add_path('/RegStatus', None)
 
     modem = Modem(svc, args.serial, rate)
     if not modem.start():

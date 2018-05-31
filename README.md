@@ -43,6 +43,7 @@ Path | Description
 /Connected | data link active (0/1)
 /IP | IP address (when connected)
 /SimStatus | status code, see below
+/RegStatus | status code, see below
 
 ### SimStatus
 The SimStatus value is either (if less than 1000) an error code as
@@ -60,6 +61,19 @@ SimStatus | Description
 16 | incorrect password
 1000 | ready
 1001 | unknown error
+
+### RegStatus
+The RegStatus value is the status code returned by the +CREG command
+defined by 3GPP TS 27.007 section 7.2.
+
+RegStatus | Description
+----------|------------
+0 | not registered, not searching for operator
+1 | registered, home network
+2 | not registered, searching for operator
+3 | registration denied
+4 | unknown
+5 | registered, roaming
 
 ### Settings
 The following localsettings values are used. These are monitored and changes acted upon.
