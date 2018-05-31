@@ -44,6 +44,7 @@ Path | Description
 /IP | IP address (when connected)
 /SimStatus | status code, see below
 
+### SimStatus
 The SimStatus value is either (if less than 1000) an error code as
 defined by 3GPP TS 27.007 section 9.2 or (1000 and higher) a status
 code per the table below.
@@ -60,6 +61,7 @@ SimStatus | Description
 1000 | ready
 1001 | unknown error
 
+### Settings
 The following localsettings values are used. These are monitored and changes acted upon.
 
 Setting | Description
