@@ -248,7 +248,7 @@ class Modem(object):
             return
 
         if cmd == '+CGPADDR':
-            ip = v[1]
+            ip = v[1].strip('"')
             if ip == '0.0.0.0':
                 ip = None
             self.dbus['/IP'] = ip
