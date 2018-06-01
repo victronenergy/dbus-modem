@@ -24,6 +24,15 @@ modem_settings = {
 
 WDOG_GPIO = 44
 
+class REG_STATUS(int, Enum):
+    # Status codes defined by 3GPP TS 27.007, section 7.2
+    NREG                = 0
+    HOME                = 1
+    SEARCHING           = 2
+    DENIED              = 3
+    UNKNOWN             = 4
+    ROAMING             = 5
+
 class SIM_STATUS(int, Enum):
     # Error codes defined by 3GPP TS 27.007, section 9.2
     PH_SIM_PIN      = 5
@@ -218,11 +227,15 @@ class Modem(object):
 
         if cmd == '+CREG':
             stat = int(v[1])
+            try:
+                stat = REG_STATUS(stat)
+            except:
+                pass
 
-            if stat == 1:
+            if stat == REG_STATUS.HOME:
                 self.registered = True
                 self.roaming = False
-            elif stat == 5:
+            elif stat == REG_STATUS.ROAMING:
                 self.registered = True
                 self.roaming = True
             else:
