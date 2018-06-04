@@ -16,6 +16,8 @@ from settingsdevice import SettingsDevice
 import logging
 log = logging.getLogger()
 
+VERSION = '0.1'
+
 modem_settings = {
     'connect': ['/Settings/Modem/Connect', 1, 0, 1],
     'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
@@ -439,7 +441,8 @@ def main():
 
     rate = 115200
 
-    log.info('Starting dbus-modem on %s at %d bps' % (args.serial, rate))
+    log.info('Starting dbus-modem %s on %s at %d bps' %
+             (VERSION, args.serial, rate))
 
     gobject.threads_init()
     dbus.mainloop.glib.threads_init()
