@@ -152,6 +152,7 @@ class Modem(object):
 
                 # reset succeeded
                 if line == 'OK' and self.lastcmd == 'AT&F':
+                    self.send('ATH')
                     self.ready = True
 
             self.ser.timeout = None
