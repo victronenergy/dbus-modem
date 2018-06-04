@@ -345,11 +345,13 @@ class Modem(object):
 
     def connect(self):
         if not self.ppp:
+            log.debug('Starting pppd')
             os.system('svc -u /service/ppp')
             self.ppp = True
 
     def disconnect(self, force=False):
         if self.ppp or force:
+            log.debug('Stopping pppd')
             os.system('svc -d /service/ppp')
             self.ppp = False
 
