@@ -104,7 +104,7 @@ class Modem(object):
         log.error('%s, quitting' % msg)
 
         mainloop.quit()
-        self.disconnect()
+        self.disconnect(True)
 
         with self.cv:
             self.running = False
@@ -346,8 +346,8 @@ class Modem(object):
             os.system('svc -u /service/ppp')
             self.ppp = True
 
-    def disconnect(self):
-        if self.ppp != False:
+    def disconnect(self, force=False):
+        if self.ppp or force:
             os.system('svc -d /service/ppp')
             self.ppp = False
 
@@ -377,7 +377,7 @@ class Modem(object):
 
     def start(self):
         # make sure pppd is not running
-        self.disconnect()
+        self.disconnect(True)
 
         log.info('Waiting for localsettings')
         self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
