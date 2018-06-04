@@ -176,6 +176,7 @@ class Modem(object):
             return
 
         self.cmd([
+            'AT+CPIN?',
             'AT+CREG?',
             'AT+COPS?',
             'AT*CNTI?',
