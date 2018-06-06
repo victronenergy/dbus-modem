@@ -214,15 +214,20 @@ class Modem(object):
 
         if cmd == '+CPIN':
             self.sim_status = CPIN.get(resp, SIM_STATUS.ERROR)
+            self.dbus['/SimStatus'] = self.sim_status
 
-            if self.sim_status == SIM_STATUS.SIM_PIN and self.settings['pin']:
+            if self.sim_status == SIM_STATUS.SIM_PIN:
+                if not self.settings['pin']:
+                    log.error('SIM PIN required but not configured: %s' % resp)
+                    return
+
                 log.info('SIM PIN required, sending')
                 pin = self.settings['pin'].encode('ascii', 'ignore')
                 self.cmd(['AT+CPIN=%s' % pin])
-            elif self.sim_status != SIM_STATUS.READY:
-                log.error('Unknown PIN required: %s' % resp)
 
-            self.dbus['/SimStatus'] = self.sim_status
+            elif self.sim_status != SIM_STATUS.READY:
+                log.error('Unknown SIM-PIN status: %s' % resp)
+
             return
 
         v = resp.split(',')
