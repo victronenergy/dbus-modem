@@ -256,6 +256,9 @@ class Modem(object):
             return
 
         if cmd == '+COPS':
+            if len(v) < 3:
+                return
+
             net = v[2].strip('"')
             self.dbus['/NetworkName'] = net
             return
