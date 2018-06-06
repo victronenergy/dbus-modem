@@ -213,10 +213,7 @@ class Modem(object):
             return
 
         if cmd == '+CPIN':
-            if resp in CPIN:
-                self.sim_status = CPIN[resp]
-            else:
-                self.sim_status = SIM_STATUS.ERROR
+            self.sim_status = CPIN.get(resp, SIM_STATUS.ERROR)
 
             if self.sim_status == SIM_STATUS.SIM_PIN and self.settings['pin']:
                 log.info('SIM PIN required, sending')
