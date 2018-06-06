@@ -378,7 +378,7 @@ class Modem(object):
             return
 
         if setting == 'pin':
-            self.cmd(['AT+CPIN'])
+            self.cmd(['AT+CPIN?'])
             return
 
     def start(self):
