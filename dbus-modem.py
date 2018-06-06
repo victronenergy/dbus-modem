@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import threading
+import traceback
 import serial
 import gobject
 import dbus
@@ -284,6 +285,7 @@ class Modem(object):
         try:
             err = int(err)
         except:
+            # some errors are reported as strings, ignore failure
             pass
 
         if cmd.startswith('+CPIN'):
@@ -346,6 +348,7 @@ class Modem(object):
             try:
                 self.handle_resp(cmd, resp)
             except:
+                log.debug(traceback.format_exc())
                 pass
 
     def connect(self):
