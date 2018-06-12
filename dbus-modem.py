@@ -1,7 +1,7 @@
 #! /usr/bin/python -u
 
 from argparse import ArgumentParser
-from enum import Enum
+from enum import IntEnum
 import os
 import sys
 import time
@@ -26,7 +26,12 @@ modem_settings = {
 
 WDOG_GPIO = 44
 
-class REG_STATUS(int, Enum):
+class XEnum(IntEnum):
+    @classmethod
+    def get(cls, val):
+        return cls(val) if any(val == m.value for m in cls) else val
+
+class REG_STATUS(XEnum):
     # Status codes defined by 3GPP TS 27.007, section 7.2
     NREG                = 0
     HOME                = 1
@@ -35,7 +40,7 @@ class REG_STATUS(int, Enum):
     UNKNOWN             = 4
     ROAMING             = 5
 
-class SIM_STATUS(int, Enum):
+class SIM_STATUS(XEnum):
     # Error codes defined by 3GPP TS 27.007, section 9.2
     PH_SIM_PIN      = 5
     PH_FSIM_PIN     = 6
