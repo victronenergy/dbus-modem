@@ -83,6 +83,7 @@ Setting | Description
 /Settings/Modem/Connect | establish data connection (0/1)
 /Settings/Modem/RoamingPermitted | connect when roaming (0/1)
 /Settings/Modem/PIN | SIM PIN (string)
+/Settings/Modem/APN | Access point name (string)
 
 ## Routing
 When the data connection is active, it is configured with a high routing metric. This way, the Linux

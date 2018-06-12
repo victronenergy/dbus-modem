@@ -23,6 +23,7 @@ modem_settings = {
     'connect': ['/Settings/Modem/Connect', 1, 0, 1],
     'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
     'pin':     ['/Settings/Modem/PIN', '', 0, 0],
+    'apn':     ['/Settings/Modem/APN', '', 0, 0],
 }
 
 WDOG_GPIO = 44
@@ -214,6 +215,7 @@ class Modem(object):
             return
 
         if cmd == '+CPIN':
+            prev_status = self.sim_status
             self.sim_status = CPIN.get(resp, SIM_STATUS.ERROR)
             self.dbus['/SimStatus'] = self.sim_status
 
@@ -226,7 +228,12 @@ class Modem(object):
                 pin = self.settings['pin'].encode('ascii', 'ignore')
                 self.cmd(['AT+CPIN=%s' % pin])
 
-            elif self.sim_status != SIM_STATUS.READY:
+            elif self.sim_status == SIM_STATUS.READY:
+                if self.sim_status != prev_status:
+                    apn = self.settings['apn'].encode('ascii', 'ignore')
+                    self.cmd(['AT+CGDCONT=1,"IP","%s"' % apn])
+
+            else:
                 log.error('Unknown SIM-PIN status: %s' % resp)
 
             return
