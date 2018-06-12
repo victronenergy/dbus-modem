@@ -232,11 +232,7 @@ class Modem(object):
             return
 
         if cmd == '+CREG':
-            stat = int(v[1])
-            try:
-                stat = REG_STATUS(stat)
-            except:
-                pass
+            stat = REG_STATUS.get(int(v[1]))
 
             if stat == REG_STATUS.HOME:
                 self.registered = True
