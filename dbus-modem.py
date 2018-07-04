@@ -17,7 +17,7 @@ from settingsdevice import SettingsDevice
 import logging
 log = logging.getLogger()
 
-VERSION = '0.1'
+VERSION = '0.2'
 
 modem_settings = {
     'connect': ['/Settings/Modem/Connect', 1, 0, 1],
