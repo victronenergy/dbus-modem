@@ -361,6 +361,8 @@ class Modem(object):
                 log.debug(traceback.format_exc())
                 pass
 
+        os._exit(1)
+
     def connect(self):
         if not self.ppp:
             log.debug('Starting pppd')
@@ -485,6 +487,8 @@ def main():
 
     gobject.timeout_add(5000, modem.update)
     mainloop.run()
+
+    os._exit(1)
 
 try:
     main()
