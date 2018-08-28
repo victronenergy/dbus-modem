@@ -17,6 +17,8 @@ from settingsdevice import SettingsDevice
 import logging
 log = logging.getLogger()
 
+from datetime import datetime
+
 VERSION = '0.2'
 
 modem_settings = {
@@ -369,7 +371,7 @@ class Modem(object):
                 log.debug(traceback.format_exc())
                 pass
 
-        os._exit(1)
+        quit(1)
 
     def connect(self):
         if not self.ppp:
@@ -443,8 +445,16 @@ class Modem(object):
             self.wdog_update()
         return True
 
+def quit(n):
+    global start
+    log.info('End. Run time %s' % str(datetime.now() - start))
+    os._exit(n)
+
 def main():
     global mainloop
+    global start
+
+    start = datetime.now()
 
     parser = ArgumentParser(description='dbus-modem', add_help=True)
     parser.add_argument('-d', '--debug', help='enable debug logging',
@@ -500,7 +510,7 @@ def main():
     gobject.timeout_add(5000, modem.update)
     mainloop.run()
 
-    os._exit(1)
+    quit(1)
 
 try:
     main()
