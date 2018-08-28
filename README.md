@@ -15,19 +15,19 @@ SIM5218` in the various machine branches on https://github.com/victronenergy/lin
 
 ## Hardware watchdog
 To cope with lockups or other issues, there is a watchdog IC watching over the Simcom. Its configured
-such that the startup delay is 60s. And normal delay is 10s. Its output is connected to the reset
-pin on the Simcom.
+such that both the startup delay and subsequent normal delay are 60s. Note that in practice its more,
+and probably varies. We've seen 90s. Its output is connected to the reset pin on the Simcom.
 
-The watchdog is connected to the modem gpio with two pins:
-1. WD_SET0 to GPIO41
-2. WD_WDI to GPIO44
+The reset is on a GPIO of the Simcom:
+
+* WD_WDI to GPIO44
 
 For both pins we store a default config to the modem eeprom, see below.
 
 To wait, or not to wait, for the first edge?
 If anything goes wrong in between the modem powering up, and the script sending the first edge, the
 mechanism will be stuck. Hence we decided to have the hardware watchdog active from the start. Not
-waiting for the first edge. GPIO41 must be set high for that.
+waiting for the first edge.
 
 ## D-Bus
 The following read-only values are exported under the com.victronenergy.modem service:
@@ -40,7 +40,7 @@ Path | Description
 /NetworkType | type of mobile network (GSM, UMTS, ...)
 /SignalStrength | signal strength (0-31)
 /Roaming | currently roaming (0/1)
-/Connected | data link active (0/1)
+/Connected | data link active (0/1)  (*)
 /IP | IP address (when connected)
 /SimStatus | status code, see below
 /RegStatus | status code, see below
@@ -96,14 +96,6 @@ as well as serial-starter in meta-victronenergy-private, for details.
 The Simcom modules on our GX GSM are preprogrammed after assembly.
 
 ```
-# disable some special function (FUNC_WAKEUP_HOST) on pin 41. This is stored in
-# eeprom. Note to *never* use AT+CRESET, as it will re-enable this special function.
-at+cgfunc=13,0
-
-# configure pin 41 as output and default value 1 (high) - stored to eeprom
-at+cgdrt=41,1,1
-at+cgsetv=41,1,1
-
 # configure pin 44 as output and default value to 0 (low) - stored to eeprom
 at+cgdrt=44,1,1
 at+cgsetv=44,0,1
@@ -113,10 +105,6 @@ See the [modem chapter in the commandline manual](https://github.com/victronener
 
 To check the configuration:
 ```
-at+cgfunc=13  (should respond with 0 = disabled)
-
-at+cggetv=41 (should respond with 1 = high)
-
 at+cggetv=44 (should respond with 0 = low; unless script has been running already)
 ```
 
