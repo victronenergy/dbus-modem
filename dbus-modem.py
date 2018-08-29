@@ -19,7 +19,7 @@ log = logging.getLogger()
 
 from datetime import datetime
 
-VERSION = '0.4'
+VERSION = '0.5'
 
 modem_settings = {
     'connect': ['/Settings/Modem/Connect', 1, 0, 1],
