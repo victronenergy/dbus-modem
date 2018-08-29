@@ -205,6 +205,10 @@ class Modem(object):
         self.cmd(['AT+CGSETV=%d,%d,0' % (WDOG_GPIO, self.wdog)])
         self.wdog ^= 1
 
+    def update_apn(self):
+        apn = self.settings['apn'].encode('ascii', 'ignore')
+        self.cmd(['AT+CGDCONT=1,"IP","%s"' % apn])
+
     def handle_resp(self, cmd, resp):
         if cmd == '+CGMM':
             self.dbus['/Model'] = resp
@@ -230,8 +234,7 @@ class Modem(object):
 
             elif self.sim_status == SIM_STATUS.READY:
                 if self.sim_status != prev_status:
-                    apn = self.settings['apn'].encode('ascii', 'ignore')
-                    self.cmd(['AT+CGDCONT=1,"IP","%s"' % apn])
+                    self.update_apn()
 
             else:
                 log.error('Unknown SIM-PIN status: %s' % resp)
@@ -402,6 +405,10 @@ class Modem(object):
 
         if setting == 'pin':
             self.cmd(['AT+CPIN?'])
+            return
+
+        if setting == 'apn':
+            self.update_apn()
             return
 
     def start(self):
