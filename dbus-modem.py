@@ -176,7 +176,6 @@ class Modem(object):
         self.cmd([
             'AT+CGMM',
             'AT+CGSN',
-            'AT+CGPS=1',
             'AT+CMEE=1',
             'AT+CPIN?',
         ])
@@ -193,6 +192,7 @@ class Modem(object):
             'AT+CSQ',
             'AT+CGACT?',
             'AT+CGPADDR',
+            'AT+CGPS?',
         ])
 
     def wdog_init(self):
@@ -283,6 +283,11 @@ class Modem(object):
             if ip == '0.0.0.0':
                 ip = None
             self.dbus['/IP'] = ip
+            return
+
+        if cmd == '+CGPS':
+            if int(v[0]) != 1:
+                self.cmd(['AT+CGPS=1'])
             return
 
     def handle_error(self, cmd, err):
