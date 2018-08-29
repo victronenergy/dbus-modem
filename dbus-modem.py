@@ -208,6 +208,7 @@ class Modem(object):
         self.wdog ^= 1
 
     def update_apn(self):
+        self.disconnect()
         apn = self.settings['apn'].encode('ascii', 'ignore')
         self.cmd(['AT+CGDCONT=1,"IP","%s"' % apn])
 
