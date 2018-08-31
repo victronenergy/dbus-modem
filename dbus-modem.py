@@ -94,7 +94,7 @@ class Modem(object):
     def __init__(self, dbussvc, dev, rate):
         self.dbus = dbussvc
         self.lock = threading.Lock()
-        self.cv = threading.Condition(self.lock)
+        self.cv = threading.Condition(threading.Lock())
         self.thread = None
         self.ser = None
         self.dev = dev
@@ -325,12 +325,13 @@ class Modem(object):
         self.wdog_init()
 
         while True:
-            with self.cv:
+            with self.lock:
                 if self.ready and self.cmds:
                     self.send(self.cmds.pop(0))
-                    if not self.cmds:
-                        self.running = True
-                        self.cv.notify()
+                    if not self.cmds and not self.running:
+                        with self.cv:
+                            self.running = True
+                            self.cv.notify()
 
             try:
                 line = self.ser.readline().strip()
