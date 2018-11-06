@@ -314,10 +314,10 @@ class Modem(object):
             pass
 
         if cmd.startswith('+CPIN'):
-            self.sim_status = SIM_STATUS.get(err)
+            self.sim_status = SIM_STATUS.get(err, SIM_STATUS.BAD_PASSWD)
             self.dbus['/SimStatus'] = self.sim_status
             # clear stored PIN if incorrect
-            if err == SIM_STATUS.BAD_PASSWD:
+            if self.sim_status == SIM_STATUS.BAD_PASSWD:
                 log.info('Wrong PIN, clearing stored value')
                 self.settings['pin'] = ''
 
