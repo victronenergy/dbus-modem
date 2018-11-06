@@ -32,8 +32,12 @@ WDOG_GPIO = 44
 
 class XEnum(IntEnum):
     @classmethod
-    def get(cls, val):
-        return cls(val) if any(val == m.value for m in cls) else val
+    def get(cls, val, default=None):
+        if any(val == m.value for m in cls):
+            return cls(val)
+        elif default != None:
+            return default
+        return val
 
 class REG_STATUS(XEnum):
     # Status codes defined by 3GPP TS 27.007, section 7.2
