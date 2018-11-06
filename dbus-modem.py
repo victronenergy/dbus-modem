@@ -187,11 +187,12 @@ class Modem(object):
         ])
 
     def modem_update(self):
+        self.cmd(['AT+CPIN?'])
+
         if self.sim_status != SIM_STATUS.READY:
             return
 
         self.cmd([
-            'AT+CPIN?',
             'AT+CREG?',
             'AT+COPS?',
             'AT*CNTI?',
