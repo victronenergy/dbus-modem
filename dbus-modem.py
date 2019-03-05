@@ -187,7 +187,10 @@ class Modem(object):
         ])
 
     def modem_update(self):
-        self.cmd(['AT+CPIN?'])
+        self.cmd([
+            'AT+CPIN?',
+            'AT+CGPS?',
+        ])
 
         if self.sim_status != SIM_STATUS.READY:
             return
@@ -199,7 +202,6 @@ class Modem(object):
             'AT+CSQ',
             'AT+CGACT?',
             'AT+CGPADDR',
-            'AT+CGPS?',
         ])
 
     def wdog_init(self):
