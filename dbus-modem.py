@@ -30,6 +30,11 @@ modem_settings = {
 
 WDOG_GPIO = 44
 
+# models with save flag in gpio commands
+GPIO_SAVE = [
+    'SIMCOM_SIM5360E',
+]
+
 class XEnum(IntEnum):
     @classmethod
     def get(cls, val, default=None):
@@ -112,6 +117,7 @@ class Modem(object):
         self.ppp = None
         self.sim_status = None
         self.wdog = 0
+        self.gpio_save = ''
 
     def error(self, msg):
         global mainloop
@@ -206,12 +212,12 @@ class Modem(object):
 
     def wdog_init(self):
         self.cmd([
-            'AT+CGDRT=%d,1,0' % WDOG_GPIO,
-            'AT+CGSETV=%d,1,0' % WDOG_GPIO,
+            'AT+CGDRT=%d,1' % WDOG_GPIO,
+            'AT+CGSETV=%d,1' % WDOG_GPIO,
         ])
 
     def wdog_update(self):
-        self.cmd(['AT+CGSETV=%d,%d,0' % (WDOG_GPIO, self.wdog)])
+        self.cmd(['AT+CGSETV=%d,%d%s' % (WDOG_GPIO, self.wdog, self.gpio_save)])
         self.wdog ^= 1
 
     def update_apn(self):
@@ -222,6 +228,8 @@ class Modem(object):
     def handle_resp(self, cmd, resp):
         if cmd == '+CGMM':
             self.dbus['/Model'] = resp
+            if resp in GPIO_SAVE:
+                self.gpio_save = ',0'
             return
 
         if cmd == '+CGSN':
