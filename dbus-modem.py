@@ -80,6 +80,30 @@ class SIM_STATUS(XEnum):
     READY           = 1000
     ERROR           = 1001
 
+# Network mode codes returned by AT+CNSMOD
+NET_MODE = {
+    0:  'NONE',
+    1:  'GSM',
+    2:  'GPRS',
+    3:  'EDGE',
+    4:  'UMTS',
+    5:  'HSDPA',
+    6:  'HSUPA',
+    7:  'HSPA',
+    8:  'LTE',
+    9:  'TDS-CDMA',
+    10: 'TDS-HSDPA',
+    11: 'TDS-HSUPA',
+    12: 'TDS-HSPA',
+    13: 'CDMA',
+    14: 'EVDO',
+    15: 'CDMA/EVDO',
+    16: 'CDMA/LTE',
+    23: 'eHRPD',
+    24: 'CDMA/eHRPD',
+    30: 'HSPA+',
+}
+
 CPIN = {
     'READY':          SIM_STATUS.READY,
     'SIM PIN':        SIM_STATUS.SIM_PIN,
@@ -204,7 +228,7 @@ class Modem(object):
         self.cmd([
             'AT+CREG?',
             'AT+COPS?',
-            'AT*CNTI?',
+            'AT+CNSMOD?',
             'AT+CSQ',
             'AT+CGACT?',
             'AT+CGPADDR',
@@ -261,8 +285,8 @@ class Modem(object):
 
         v = resp.split(',')
 
-        if cmd == '*CNTI':
-            self.dbus['/NetworkType'] = v[1]
+        if cmd == '+CNSMOD':
+            self.dbus['/NetworkType'] = NET_MODE[int(v[1])]
             return
 
         if cmd == '+CREG':
