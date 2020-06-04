@@ -93,19 +93,4 @@ to the correct name server on Ethernet/Wifi or mobile data. See various recipes 
 as well as serial-starter in meta-victronenergy-private, for details.
 
 ## Preparation in the factory
-The Simcom modules on our GX GSM are preprogrammed after assembly.
-
-```
-# configure pin 44 as output and default value to 0 (low) - stored to eeprom
-at+cgdrt=44,1,1
-at+cgsetv=44,0,1
-```
-
-See the [modem chapter in the commandline manual](https://github.com/victronenergy/venus/wiki/commandline-introduction#modem) for how to run those commands from within the Venus shell.
-
-To check the configuration:
-```
-at+cggetv=44 (should respond with 0 = low; unless script has been running already)
-```
-
-Note that I did not find a way to check the direction (input/output) of a pin.
+No preparation of the modems is needed. This script, dbus-modem, always configures it (GPIO44, the watchdog reset)
