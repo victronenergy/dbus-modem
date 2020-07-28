@@ -1,7 +1,14 @@
 # dbus-modem
 
-This python application manages a cellular modem. An externally powered modem based on the Simcom
-SIM5360E module is used.
+This python application manages a cellular modem. These are the supported modem modules:
+
+- Simcom SIM5360E (3G European & some other areas)
+- Simcom SIM5360? (3G North American & some other areas)
+- Simcom SIM7600x  (4G Cat 1, as well as 2G & 3G. The x is for the various models, see Simcom datasheet)
+
+Those modules are embedded in two products offered by Victron, the
+[GX GSM](https://www.victronenergy.com/accessories/gx-gsm) and the
+[GX LTE 4G](https://nocache.victronenergy.com/accessories/gx-lte-4g).
 
 The Simcom is connected to the Venus device via USB. The module presents as multiple tty devices
 in Linux: two functionally identical AT command / data interfaces and one for GPS NMEA messages.
