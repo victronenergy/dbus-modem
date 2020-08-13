@@ -1,4 +1,4 @@
-#! /usr/bin/python -u
+#!/usr/bin/python3 -u
 
 from argparse import ArgumentParser
 from enum import IntEnum
@@ -8,7 +8,7 @@ import time
 import threading
 import traceback
 import serial
-import gobject
+from gi.repository import GLib
 import dbus
 import dbus.mainloop.glib
 from vedbus import VeDbusService
@@ -184,7 +184,7 @@ class Modem(object):
 
         log.debug('> %s' % cmd)
         try:
-            self.ser.write('\r' + cmd + '\r')
+            self.ser.write(('\r' + cmd + '\r').encode())
         except serial.SerialException:
             self.error('Write error')
 
@@ -204,7 +204,7 @@ class Modem(object):
                 if not self.ready:
                     self.send('AT')
 
-                line = self.ser.readline()
+                line = self.ser.readline().decode()
 
                 # startup chatter complete
                 if not line and self.ready:
@@ -441,7 +441,7 @@ class Modem(object):
                 line = self.ser.readline().strip()
                 if not line:
                     break
-                log.debug('< %s', line)
+                log.debug('< %s', line.decode())
         except:
             self.error()
         finally:
@@ -464,7 +464,7 @@ class Modem(object):
                             self.cv.notify()
 
             try:
-                line = self.ser.readline().strip()
+                line = self.ser.readline().strip().decode()
             except serial.SerialException:
                 self.error('Read error')
                 break
@@ -633,11 +633,10 @@ def main():
     log.info('Starting dbus-modem %s on %s at %d bps' %
              (VERSION, args.serial, rate))
 
-    gobject.threads_init()
     dbus.mainloop.glib.threads_init()
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-    mainloop = gobject.MainLoop()
+    mainloop = GLib.MainLoop()
 
     svc = VeDbusService('com.victronenergy.modem')
 
@@ -656,7 +655,7 @@ def main():
     if not modem.start():
         return
 
-    gobject.timeout_add(5000, modem.update)
+    GLib.timeout_add(5000, modem.update)
     mainloop.run()
 
     quit(1)
