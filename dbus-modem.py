@@ -283,7 +283,7 @@ class Modem(object):
 
             return
 
-        v = resp.split(',')
+        v = map(lambda x: x.strip('"'), resp.split(','))
 
         if cmd == '+CNSMOD':
             self.dbus['/NetworkType'] = NET_MODE[int(v[1])]
@@ -311,7 +311,7 @@ class Modem(object):
             if len(v) < 3:
                 return
 
-            net = v[2].strip('"')
+            net = v[2]
             self.dbus['/NetworkName'] = net
             return
 
@@ -324,7 +324,7 @@ class Modem(object):
             return
 
         if cmd == '+CGPADDR':
-            ip = v[1].strip('"')
+            ip = v[1]
             if ip == '0.0.0.0':
                 ip = None
             self.dbus['/IP'] = ip
