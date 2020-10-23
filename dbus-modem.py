@@ -134,7 +134,7 @@ class Modem(object):
         self.rate = rate
         self.cmds = []
         self.lastcmd = None
-        self.ready = True
+        self.ready = False
         self.running = None
         self.registered = None
         self.roaming = None
@@ -173,31 +173,30 @@ class Modem(object):
 
     def modem_wait(self):
         try:
-            self.ser.timeout = 5
-
-            # reset parameters to defaults
-            self.send('AT&F')
+            self.ser.timeout = 10
 
             while True:
+                if not self.ready:
+                    self.send('AT')
+
                 line = self.ser.readline()
 
                 # startup chatter complete
                 if not line and self.ready:
                     break
 
-                # modem not responding, attempt full reset
+                # modem not responding, keep trying
                 if not line:
-                    log.error('Timed out, resetting modem')
-                    self.send('AT#REBOOT')
+                    log.error('Timed out waiting for response')
                     continue
 
                 line = line.strip()
 
                 log.debug('< %s' % line)
 
-                # reset succeeded
-                if line == 'OK' and self.lastcmd == 'AT&F':
-                    self.send('ATH')
+                # command succeeded
+                if line == 'OK':
+                    self.ser.timeout = 5
                     self.ready = True
 
             self.ser.timeout = None
@@ -210,6 +209,7 @@ class Modem(object):
 
     def modem_init(self):
         self.cmd([
+            'ATH',
             'AT+CGMM',
             'AT+CGSN',
             'AT+CMEE=1',
