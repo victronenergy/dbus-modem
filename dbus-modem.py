@@ -142,6 +142,8 @@ class Modem(object):
         self.sim_status = None
         self.wdog = 0
         self.gpio_save = ''
+        self.pdp = []
+        self.pdp_cid = None
 
     def error(self, msg):
         global mainloop
@@ -244,10 +246,42 @@ class Modem(object):
         self.cmd(['AT+CGSETV=%d,%d%s' % (WDOG_GPIO, self.wdog, self.gpio_save)])
         self.wdog ^= 1
 
-    def update_apn(self):
-        self.disconnect()
+    def query_pdp(self):
+        self.pdp = []
+        self.cmd(['AT+CGDCONT?'])
+
+    def find_pdp(self, types):
+        for ctx in self.pdp:
+            if ctx[1] in types:
+                return ctx
+
+    def update_pdp(self):
+        defpdp = False
+        ctx = self.find_pdp(['IP', 'IPV4V6'])
+
+        if not ctx:
+            ctx = [1, 'IP', '']
+            defpdp = True
+
         apn = self.settings['apn'].encode('ascii', 'ignore')
-        self.cmd(['AT+CGDCONT=1,"IP","%s"' % apn])
+        if apn and apn != ctx[2]:
+            log.info('Setting APN to "%s"', apn)
+            self.disconnect()
+            ctx[2] = apn
+            defpdp = True
+
+        if defpdp:
+            self.cmd(['AT+CGDCONT=%d,"%s","%s"' % (ctx[0], ctx[1], ctx[2])])
+
+        self.pdp_cid = ctx[0]
+
+        log.info('Activating PDP context %d', self.pdp_cid)
+        self.cmd(['AT+CGACT=1,%d' % self.pdp_cid])
+
+    def handle_ok(self, cmd):
+        if cmd == '+CGDCONT?':
+            self.update_pdp()
+            return
 
     def handle_resp(self, cmd, resp):
         if cmd == '+CGMM':
@@ -276,7 +310,7 @@ class Modem(object):
 
             elif self.sim_status == SIM_STATUS.READY:
                 if self.sim_status != prev_status:
-                    self.update_apn()
+                    self.query_pdp()
 
             else:
                 log.error('Unknown SIM-PIN status: %s' % resp)
@@ -320,14 +354,24 @@ class Modem(object):
             return
 
         if cmd == '+CGACT':
-            self.dbus['/Connected'] = int(v[1])
+            if int(v[0]) == self.pdp_cid:
+                self.dbus['/Connected'] = int(v[1])
+            return
+
+        if cmd == '+CGDCONT':
+            cid = int(v[0])
+            pdp_type = v[1]
+            apn = v[2]
+            self.pdp.append([cid, pdp_type, apn])
+            log.info('PDP context %d, %s, "%s"', cid, pdp_type, apn)
             return
 
         if cmd == '+CGPADDR':
-            ip = v[1]
-            if ip == '0.0.0.0':
-                ip = None
-            self.dbus['/IP'] = ip
+            if int(v[0]) == self.pdp_cid:
+                ip = v[1]
+                if ip == '0.0.0.0':
+                    ip = None
+                self.dbus['/IP'] = ip
             return
 
         if cmd == '+CGPS':
@@ -393,7 +437,7 @@ class Modem(object):
                 self.ready = True
                 continue
 
-            if line in ['OK', 'NO CARRIER']:
+            if line == 'NO CARRIER':
                 self.ready = True
                 continue
 
@@ -407,10 +451,16 @@ class Modem(object):
                 resp = p[1]
 
             try:
-                self.handle_resp(cmd, resp)
+                if line == 'OK':
+                    self.handle_ok(cmd)
+                else:
+                    self.handle_resp(cmd, resp)
             except:
                 log.debug(traceback.format_exc())
                 pass
+
+            if line == 'OK':
+                self.ready = True
 
         quit(1)
 
@@ -451,7 +501,7 @@ class Modem(object):
             return
 
         if setting == 'apn':
-            self.update_apn()
+            self.update_pdp()
             return
 
     def start(self):
