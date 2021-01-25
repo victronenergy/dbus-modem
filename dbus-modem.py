@@ -324,7 +324,6 @@ class Modem(object):
                         log.info('SIM PIN accepted')
                     else:
                         log.info('SIM PIN not required')
-                    self.query_pdp()
 
             else:
                 log.error('Unknown SIM-PIN status: %s' % resp)
@@ -338,6 +337,7 @@ class Modem(object):
             return
 
         if cmd == '+CREG':
+            prev = self.registered
             stat = REG_STATUS.get(int(v[1]))
 
             if stat == REG_STATUS.HOME:
@@ -349,6 +349,9 @@ class Modem(object):
             else:
                 self.registered = False
                 self.roaming = False
+
+            if self.registered and not prev:
+                self.query_pdp()
 
             self.dbus['/RegStatus'] = stat
             self.dbus['/Roaming'] = self.roaming
