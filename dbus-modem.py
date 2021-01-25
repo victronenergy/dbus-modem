@@ -260,12 +260,16 @@ class Modem(object):
         ctx = self.find_pdp(['IP', 'IPV4V6'])
 
         if not ctx:
+            log.info('No suitable PDP context found, creating default')
             ctx = [1, 'IP', '']
             defpdp = True
 
         apn = self.settings['apn'].encode('ascii', 'ignore')
         if apn and apn != ctx[2]:
-            log.info('Setting APN to "%s"', apn)
+            if ctx[2]:
+                log.info('Overriding APN "%s" with "%s"', ctx[2], apn)
+            else:
+                log.info('Setting APN to "%s"', apn)
             self.disconnect()
             ctx[2] = apn
             defpdp = True
