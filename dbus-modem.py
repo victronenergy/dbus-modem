@@ -507,12 +507,18 @@ class Modem(object):
             os.system('svc -d /service/ppp')
             self.ppp = False
 
+    def connect_allowed(self):
+        if self.settings['connect']:
+            if self.roaming == False or self.settings['roaming']:
+                return True
+
+        return False
+
     def update_connection(self):
         connect = False
 
-        if self.registered and self.settings['connect']:
-            if not self.roaming or self.settings['roaming']:
-                connect = True
+        if self.registered:
+            connect = self.connect_allowed()
 
         if connect:
             self.connect()
