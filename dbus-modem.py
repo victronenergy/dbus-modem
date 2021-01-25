@@ -414,6 +414,20 @@ class Modem(object):
                 log.info('Wrong PIN, clearing stored value')
                 self.settings['pin'] = ''
 
+    def drain_resp(self):
+        try:
+            self.ser.timeout = 1
+
+            while True:
+                line = self.ser.readline().strip()
+                if not line:
+                    break
+                log.debug('< %s', line)
+        except:
+            self.error()
+        finally:
+            self.ser.timeout = None
+
     def run(self):
         if not self.modem_wait():
             return
@@ -444,6 +458,9 @@ class Modem(object):
             if line.startswith('AT'):
                 if line != self.lastcmd:
                     log.error('Unexpected command echo: %s' % line)
+                    log.error('Last command was: %s' % self.lastcmd)
+                    self.drain_resp()
+                    self.ready = True
                 continue
 
             if line == 'ERROR' or line.startswith('+CME ERROR:'):
