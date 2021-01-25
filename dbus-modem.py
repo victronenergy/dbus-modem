@@ -28,6 +28,9 @@ modem_settings = {
     'apn':     ['/Settings/Modem/APN', '', 0, 0],
 }
 
+# connection script used by pppd
+CHAT_SCRIPT = '/run/ppp/chat'
+
 # max number of commands to queue
 CMDQ_MAX = 15
 
@@ -125,6 +128,21 @@ CPIN = {
     'PH-CORP PIN':    SIM_STATUS.PH_CORP_PIN,
     'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
 }
+
+def make_chatscript(name, pdp):
+    try:
+        if not os.access(os.path.dirname(name), os.F_OK):
+            os.mkdir(os.path.dirname(name))
+
+        f = open(name, mode='w')
+        f.write('ABORT   ERROR\n')
+        f.write("ABORT   'NO CARRIER'\n")
+        f.write("''      ATZ\n")
+        f.write('OK      AT+CGDATA="PPP",%d\n' % pdp)
+        f.write("CONNECT ''\n")
+        f.close()
+    except Exception as e:
+        log.error('Error writing chat script %s: %s', name, e)
 
 class Modem(object):
     def __init__(self, dbussvc, dev, rate):
@@ -284,9 +302,8 @@ class Modem(object):
             self.cmd(['AT+CGDCONT=%d,"%s","%s"' % (ctx[0], ctx[1], ctx[2])])
 
         self.pdp_cid = ctx[0]
-
-        log.info('Activating PDP context %d', self.pdp_cid)
-        self.cmd(['AT+CGACT=1,%d' % self.pdp_cid])
+        log.info('Using PDP context %d', self.pdp_cid)
+        self.update_connection()
 
     def handle_ok(self, cmd):
         if cmd == '+CGDCONT?':
@@ -355,7 +372,6 @@ class Modem(object):
 
             self.dbus['/RegStatus'] = stat
             self.dbus['/Roaming'] = self.roaming
-            self.update_connection()
             return
 
         if cmd == '+COPS':
@@ -501,6 +517,7 @@ class Modem(object):
     def connect(self):
         if not self.ppp:
             log.debug('Starting pppd')
+            make_chatscript(CHAT_SCRIPT, self.pdp_cid)
             os.system('svc -u /service/ppp')
             self.ppp = True
 
