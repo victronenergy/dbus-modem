@@ -310,6 +310,10 @@ class Modem(object):
 
             elif self.sim_status == SIM_STATUS.READY:
                 if self.sim_status != prev_status:
+                    if prev_status is not None:
+                        log.info('SIM PIN accepted')
+                    else:
+                        log.info('SIM PIN not required')
                     self.query_pdp()
 
             else:
