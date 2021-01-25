@@ -547,6 +547,7 @@ class Modem(object):
 def quit(n):
     global start
     log.info('End. Run time %s' % str(datetime.now() - start))
+    os.system('svc -d /service/ppp')
     os._exit(n)
 
 def main():
@@ -614,4 +615,4 @@ def main():
 try:
     main()
 except KeyboardInterrupt:
-    os._exit(1)
+    quit(1)
