@@ -28,6 +28,9 @@ modem_settings = {
     'apn':     ['/Settings/Modem/APN', '', 0, 0],
 }
 
+# max number of commands to queue
+CMDQ_MAX = 15
+
 WDOG_GPIO = 44
 
 # models with save flag in gpio commands
@@ -167,8 +170,10 @@ class Modem(object):
         except serial.SerialException:
             self.error('Write error')
 
-    def cmd(self, cmds):
+    def cmd(self, cmds, limit=False):
         with self.lock:
+            if limit and len(self.cmds) > CMDQ_MAX:
+                return
             if self.ready and not self.cmds:
                 self.send(cmds.pop(0))
             self.cmds += cmds
@@ -222,7 +227,7 @@ class Modem(object):
         self.cmd([
             'AT+CPIN?',
             'AT+CGPS?',
-        ])
+        ], limit=True)
 
         if self.sim_status != SIM_STATUS.READY:
             return
@@ -234,7 +239,7 @@ class Modem(object):
             'AT+CSQ',
             'AT+CGACT?',
             'AT+CGPADDR',
-        ])
+        ], limit=True)
 
     def wdog_init(self):
         self.cmd([
@@ -243,7 +248,8 @@ class Modem(object):
         ])
 
     def wdog_update(self):
-        self.cmd(['AT+CGSETV=%d,%d%s' % (WDOG_GPIO, self.wdog, self.gpio_save)])
+        self.cmd(['AT+CGSETV=%d,%d%s' % (WDOG_GPIO, self.wdog, self.gpio_save)],
+                 limit=True)
         self.wdog ^= 1
 
     def query_pdp(self):
