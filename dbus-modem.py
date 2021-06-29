@@ -184,7 +184,7 @@ class Modem(object):
 
         log.debug('> %s' % cmd)
         try:
-            self.ser.write('\r' + cmd + '\r')
+            self.ser.write(b'\r' + cmd.encode() + b'\r')
         except serial.SerialException:
             self.error('Write error')
 
@@ -204,7 +204,7 @@ class Modem(object):
                 if not self.ready:
                     self.send('AT')
 
-                line = self.ser.readline()
+                line = self.ser.readline().decode()
 
                 # startup chatter complete
                 if not line and self.ready:
@@ -438,7 +438,7 @@ class Modem(object):
             self.ser.timeout = 1
 
             while True:
-                line = self.ser.readline().strip()
+                line = self.ser.readline().strip().decode()
                 if not line:
                     break
                 log.debug('< %s', line)
@@ -464,7 +464,7 @@ class Modem(object):
                             self.cv.notify()
 
             try:
-                line = self.ser.readline().strip()
+                line = self.ser.readline().strip().decode()
             except serial.SerialException:
                 self.error('Read error')
                 break
