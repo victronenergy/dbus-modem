@@ -347,7 +347,7 @@ class Modem(object):
 
             return
 
-        v = map(lambda x: x.strip('"'), resp.split(','))
+        v = list(map(lambda x: x.strip('"'), resp.split(',')))
 
         if cmd == '+CNSMOD':
             self.dbus['/NetworkType'] = NET_MODE[int(v[1])]
