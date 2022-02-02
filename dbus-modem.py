@@ -332,7 +332,7 @@ class Modem(object):
                     return
 
                 log.info('SIM PIN required, sending')
-                pin = self.settings['pin'].encode('ascii', 'ignore')
+                pin = self.settings['pin']
                 self.cmd(['AT+CPIN=%s' % pin])
 
             elif self.sim_status == SIM_STATUS.READY:
