@@ -288,7 +288,7 @@ class Modem(object):
             ctx = [1, 'IP', '']
             defpdp = True
 
-        apn = self.settings['apn'].encode('ascii', 'ignore')
+        apn = self.settings['apn']
         if apn and apn != ctx[2]:
             if ctx[2]:
                 log.info('Overriding APN "%s" with "%s"', ctx[2], apn)
