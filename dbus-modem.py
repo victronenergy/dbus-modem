@@ -26,10 +26,15 @@ modem_settings = {
     'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
     'pin':     ['/Settings/Modem/PIN', '', 0, 0],
     'apn':     ['/Settings/Modem/APN', '', 0, 0],
+    'user':    ['/Settings/Modem/User', '', 0, 0],
+    'passwd':  ['/Settings/Modem/Password', '', 0, 0],
 }
 
 # connection script used by pppd
 CHAT_SCRIPT = '/run/ppp/chat'
+
+# file containing user/password for PPP authentication
+AUTH_FILE = '/run/ppp/auth'
 
 # max number of commands to queue
 CMDQ_MAX = 15
@@ -128,6 +133,19 @@ CPIN = {
     'PH-CORP PIN':    SIM_STATUS.PH_CORP_PIN,
     'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
 }
+
+def make_authfile(name, user, passwd):
+    try:
+        if not os.access(os.path.dirname(name), os.F_OK):
+            os.mkdir(os.path.dirname(name))
+
+        f = open(name, mode='w')
+        if user and passwd:
+            f.write('user %s\n' % user)
+            f.write('password %s\n' % passwd)
+        f.close()
+    except Exception as e:
+        log.error('Error writing auth file %s: %s', name, e)
 
 def make_chatscript(name, pdp):
     try:
@@ -517,6 +535,9 @@ class Modem(object):
     def connect(self):
         if not self.ppp:
             log.debug('Starting pppd')
+            make_authfile(AUTH_FILE,
+                          self.settings['user'],
+                          self.settings['passwd'])
             make_chatscript(CHAT_SCRIPT, self.pdp_cid)
             os.system('svc -u /service/ppp')
             self.ppp = True
@@ -559,6 +580,11 @@ class Modem(object):
 
         if setting == 'apn':
             self.update_pdp()
+            return
+
+        if setting == 'user' or setting == 'passwd':
+            self.disconnect()
+            self.update_connection()
             return
 
     def start(self):
