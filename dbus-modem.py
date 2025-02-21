@@ -664,7 +664,7 @@ def main():
 
     mainloop = GLib.MainLoop()
 
-    svc = VeDbusService('com.victronenergy.modem')
+    svc = VeDbusService('com.victronenergy.modem', register=False)
 
     svc.add_path('/Model', None)
     svc.add_path('/IMEI', None)
@@ -680,6 +680,8 @@ def main():
     modem = Modem(svc, args.serial, rate)
     if not modem.start():
         return
+
+    svc.register()
 
     GLib.timeout_add(5000, modem.update)
     mainloop.run()
