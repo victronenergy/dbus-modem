@@ -539,13 +539,13 @@ class Modem(object):
                           self.settings['user'],
                           self.settings['passwd'])
             make_chatscript(CHAT_SCRIPT, self.pdp_cid)
-            os.system('svc -u /service/ppp')
+            os.system('svc -u /service/ppp /service/ppp/log')
             self.ppp = True
 
     def disconnect(self, force=False):
         if self.ppp or force:
             log.debug('Stopping pppd')
-            os.system('svc -d /service/ppp')
+            os.system('svc -d /service/ppp /service/ppp/log')
             self.ppp = False
 
     def connect_allowed(self):
