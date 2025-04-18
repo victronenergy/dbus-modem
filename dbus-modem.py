@@ -134,6 +134,10 @@ CPIN = {
     'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
 }
 
+def ppp_service(up):
+    flag = '-u' if up else '-d'
+    os.system('svc %s /service/ppp /service/ppp/log' % flag)
+
 def make_authfile(name, user, passwd):
     try:
         if not os.access(os.path.dirname(name), os.F_OK):
@@ -539,13 +543,13 @@ class Modem(object):
                           self.settings['user'],
                           self.settings['passwd'])
             make_chatscript(CHAT_SCRIPT, self.pdp_cid)
-            os.system('svc -u /service/ppp /service/ppp/log')
+            ppp_service(True)
             self.ppp = True
 
     def disconnect(self, force=False):
         if self.ppp or force:
             log.debug('Stopping pppd')
-            os.system('svc -d /service/ppp /service/ppp/log')
+            ppp_service(False)
             self.ppp = False
 
     def connect_allowed(self):
@@ -622,7 +626,7 @@ class Modem(object):
 def quit(n):
     global start
     log.info('End. Run time %s' % str(datetime.now() - start))
-    os.system('svc -d /service/ppp')
+    ppp_service(False)
     os._exit(n)
 
 def main():
