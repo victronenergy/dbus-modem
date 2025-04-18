@@ -302,29 +302,41 @@ class Modem(object):
                  limit=True)
         self.wdog ^= 1
 
-    def query_pdp(self):
-        self.cmd(['AT+CGDCONT?'])
+    def select_pdp(self):
+        self.pdp_cid = None
+        self.cmd([
+            'AT+CGACT?',
+            'AT+CGDCONT?',
+        ])
 
-    def find_pdp(self, types):
-        for ctx in self.pdp:
-            if ctx[1] in types:
-                return ctx
+    def find_pdp(self, types, apn):
+        cl = []
+
+        for i in range(len(self.pdp)):
+            ctx = self.pdp[i]
+            act = ctx[0] in self.pdp_act
+
+            try:
+                pref = types.index(ctx[1])
+            except ValueError:
+                pref = 1000
+
+            cl.append((not act, pref, ctx[2] != apn, i, ctx))
+
+        return list(min(cl)[-1]) if cl else None
 
     def update_pdp(self):
         defpdp = False
-        ctx = self.find_pdp(['IP', 'IPV4V6'])
+        apn = self.settings['apn']
+        types = ['IP', 'IPV4V6', 'IPV6']
+        ctx = self.find_pdp(types, apn)
 
         if not ctx:
-            log.info('No suitable PDP context found, creating default')
-            ctx = [1, 'IP', '']
+            ctx = [1, types[0], apn]
             defpdp = True
 
-        apn = self.settings['apn']
         if apn and apn != ctx[2]:
-            if ctx[2]:
-                log.info('Overriding APN "%s" with "%s"', ctx[2], apn)
-            else:
-                log.info('Setting APN to "%s"', apn)
+            log.info('Overriding APN: "%s" -> "%s"', ctx[2], apn)
             ctx[2] = apn
             defpdp = True
 
@@ -409,7 +421,7 @@ class Modem(object):
                 self.roaming = False
 
             if self.registered and not prev:
-                self.query_pdp()
+                self.select_pdp()
 
             self.dbus['/RegStatus'] = stat
             self.dbus['/Roaming'] = self.roaming
@@ -614,7 +626,7 @@ class Modem(object):
             return
 
         if setting == 'apn':
-            self.update_pdp()
+            self.select_pdp()
             return
 
         if setting == 'user' or setting == 'passwd':
