@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from enum import IntEnum
 import os
+import signal
 import sys
 import time
 import threading
@@ -641,6 +642,11 @@ def quit(n):
     ppp_service(False)
     os._exit(n)
 
+def sigterm(s, f):
+    global mainloop
+    log.info('Signal received, terminating')
+    mainloop.quit()
+
 def main():
     global mainloop
     global start
@@ -679,6 +685,9 @@ def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     mainloop = GLib.MainLoop()
+
+    signal.signal(signal.SIGINT, sigterm)
+    signal.signal(signal.SIGTERM, sigterm)
 
     modem = Modem(args.serial, rate)
     if not modem.start():
