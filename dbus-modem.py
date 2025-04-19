@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser
 from enum import IntEnum
+import ipaddress
 import os
 import signal
 import sys
@@ -134,6 +135,14 @@ CPIN = {
     'PH-CORP PIN':    SIM_STATUS.PH_CORP_PIN,
     'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
 }
+
+def parse_ip(s):
+    x = bytes(map(int, s.split('.')))
+
+    if not any(x):
+        return None
+
+    return ipaddress.ip_address(x)
 
 def ppp_service(up):
     flag = '-u' if up else '-d'
@@ -423,10 +432,13 @@ class Modem(object):
 
         if cmd == '+CGPADDR':
             if int(v[0]) == self.pdp_cid:
-                ip = v[1]
-                if ip == '0.0.0.0':
-                    ip = None
+                ip = parse_ip(v[1])
+
+                if ip is not None:
+                    ip = str(ip)
+
                 self.dbus['/IP'] = ip
+
             return
 
         if cmd == '+CGPS':
