@@ -325,7 +325,6 @@ class Modem(object):
                 log.info('Overriding APN "%s" with "%s"', ctx[2], apn)
             else:
                 log.info('Setting APN to "%s"', apn)
-            self.disconnect()
             ctx[2] = apn
             defpdp = True
 
@@ -335,6 +334,7 @@ class Modem(object):
 
         self.pdp_cid = ctx[0]
         log.info('Using PDP context %d', self.pdp_cid)
+        self.disconnect()
         self.update_connection()
 
     def handle_ok(self, cmd):
