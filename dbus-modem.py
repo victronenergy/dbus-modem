@@ -167,8 +167,7 @@ def make_chatscript(name, pdp):
         log.error('Error writing chat script %s: %s', name, e)
 
 class Modem(object):
-    def __init__(self, dbussvc, dev, rate):
-        self.dbus = dbussvc
+    def __init__(self, dev, rate):
         self.lock = threading.Lock()
         self.cv = threading.Condition(threading.Lock())
         self.thread = None
@@ -595,6 +594,19 @@ class Modem(object):
         # make sure pppd is not running
         self.disconnect(True)
 
+        self.dbus = VeDbusService('com.victronenergy.modem', register=False)
+        self.dbus.add_path('/Model', None)
+        self.dbus.add_path('/IMEI', None)
+        self.dbus.add_path('/NetworkName', None)
+        self.dbus.add_path('/NetworkType', None)
+        self.dbus.add_path('/SignalStrength', None)
+        self.dbus.add_path('/Roaming', None)
+        self.dbus.add_path('/Connected', None)
+        self.dbus.add_path('/IP', None)
+        self.dbus.add_path('/SimStatus', None)
+        self.dbus.add_path('/RegStatus', None)
+        self.dbus.register()
+
         log.info('Waiting for localsettings')
         self.settings = SettingsDevice(self.dbus.dbusconn, modem_settings,
                                        self.setting_changed, timeout=10)
@@ -668,24 +680,9 @@ def main():
 
     mainloop = GLib.MainLoop()
 
-    svc = VeDbusService('com.victronenergy.modem', register=False)
-
-    svc.add_path('/Model', None)
-    svc.add_path('/IMEI', None)
-    svc.add_path('/NetworkName', None)
-    svc.add_path('/NetworkType', None)
-    svc.add_path('/SignalStrength', None)
-    svc.add_path('/Roaming', None)
-    svc.add_path('/Connected', None)
-    svc.add_path('/IP', None)
-    svc.add_path('/SimStatus', None)
-    svc.add_path('/RegStatus', None)
-
-    modem = Modem(svc, args.serial, rate)
+    modem = Modem(args.serial, rate)
     if not modem.start():
         return
-
-    svc.register()
 
     GLib.timeout_add(5000, modem.update)
     mainloop.run()
