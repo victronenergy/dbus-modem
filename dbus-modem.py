@@ -534,8 +534,6 @@ class Modem(object):
             if line == 'OK':
                 self.ready = True
 
-        quit(1)
-
     def connect(self):
         if not self.ppp:
             log.debug('Starting pppd')
