@@ -423,8 +423,14 @@ class Modem(object):
             return
 
         if cmd == '+CGACT':
-            if int(v[0]) == self.pdp_cid:
-                self.dbus['/Connected'] = int(v[1])
+            cid = int(v[0])
+            act = int(v[1])
+
+            if cid == self.pdp_cid:
+                self.dbus['/Connected'] = act
+            elif act:
+                self.cmd(['AT+CGACT=0,%d' % cid])
+
             return
 
         if cmd == '+CGDCONT':
