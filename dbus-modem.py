@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from enum import IntEnum
 import ipaddress
 import os
+import queue
 import signal
 import sys
 import time
@@ -178,14 +179,12 @@ def make_chatscript(name, pdp):
 
 class Modem(object):
     def __init__(self, dev, rate):
-        self.lock = threading.Lock()
-        self.cv = threading.Condition(threading.Lock())
         self.thread = None
         self.ser = None
         self.dev = dev
         self.rate = rate
         self.line = None
-        self.cmds = []
+        self.cmds = queue.Queue()
         self.lastcmd = None
         self.ready = False
         self.running = None
@@ -207,9 +206,8 @@ class Modem(object):
         mainloop.quit()
         self.disconnect(True)
 
-        with self.cv:
-            self.running = False
-            self.cv.notify()
+        self.running = False
+        self.cmds.shutdown(True)
 
     def readline(self):
         if self.line is None:
@@ -240,11 +238,16 @@ class Modem(object):
             self.error('Write error')
 
     def cmd(self, cmds, limit=False):
-        with self.lock:
-            if limit and len(self.cmds) > CMDQ_MAX:
-                return
-            self.cmds += cmds
-            self.ser.cancel_read()
+        if limit and self.cmds.qsize() > CMDQ_MAX:
+            return
+
+        try:
+            for c in cmds:
+                self.cmds.put(c)
+        except queue.Shutdown:
+            pass
+
+        self.ser.cancel_read()
 
     def modem_wait(self):
         try:
@@ -534,17 +537,19 @@ class Modem(object):
         if not self.modem_wait():
             return
 
-        self.modem_init()
-        self.wdog_init()
-
         while True:
-            with self.lock:
-                if self.ready and self.cmds:
-                    self.send(self.cmds.pop(0))
-                    if not self.cmds and not self.running:
-                        with self.cv:
-                            self.running = True
-                            self.cv.notify()
+            if self.ready:
+                try:
+                    self.send(self.cmds.get(False))
+
+                    if self.cmds.empty() and self.running is None:
+                        self.running = True
+
+                    self.cmds.task_done()
+                except queue.Empty:
+                    pass
+                except queue.Shutdown:
+                    break
 
             try:
                 line = self.readline()
@@ -677,10 +682,11 @@ class Modem(object):
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
+        self.modem_init()
+        self.wdog_init()
+
         log.info('Waiting for modem to become ready')
-        with self.cv:
-            while self.running == None:
-                self.cv.wait()
+        self.cmds.join()
 
         if self.running:
             log.info('Modem ready')
