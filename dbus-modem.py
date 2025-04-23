@@ -337,6 +337,9 @@ class Modem(object):
         self.disconnect()
         self.update_connection()
 
+    def handle_echo(self, cmd):
+        pass
+
     def handle_ok(self, cmd):
         if cmd == '+CGDCONT?':
             self.update_pdp()
@@ -515,7 +518,7 @@ class Modem(object):
                     log.error('Last command was: %s' % self.lastcmd)
                     self.drain_resp()
                     self.ready = True
-                continue
+                    continue
 
             if line == 'ERROR' or line.startswith('+CME ERROR:'):
                 self.handle_error(self.lastcmd.lstrip('AT'), line)
@@ -538,6 +541,8 @@ class Modem(object):
             try:
                 if line == 'OK':
                     self.handle_ok(cmd)
+                elif line.startswith('AT'):
+                    self.handle_echo(cmd)
                 else:
                     self.handle_resp(cmd, resp)
             except:
