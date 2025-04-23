@@ -302,7 +302,6 @@ class Modem(object):
         self.wdog ^= 1
 
     def query_pdp(self):
-        self.pdp = []
         self.cmd(['AT+CGDCONT?'])
 
     def find_pdp(self, types):
@@ -338,7 +337,9 @@ class Modem(object):
         self.update_connection()
 
     def handle_echo(self, cmd):
-        pass
+        if cmd == '+CGDCONT?':
+            self.pdp = []
+            return
 
     def handle_ok(self, cmd):
         if cmd == '+CGDCONT?':
