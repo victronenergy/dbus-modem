@@ -28,6 +28,7 @@ modem_settings = {
     'roaming': ['/Settings/Modem/RoamingPermitted', 0, 0, 1],
     'pin':     ['/Settings/Modem/PIN', '', 0, 0],
     'apn':     ['/Settings/Modem/APN', '', 0, 0],
+    'pdptype': ['/Settings/Modem/PDPType', '', 0, 0],
     'user':    ['/Settings/Modem/User', '', 0, 0],
     'passwd':  ['/Settings/Modem/Password', '', 0, 0],
 }
@@ -328,11 +329,23 @@ class Modem(object):
     def update_pdp(self):
         defpdp = False
         apn = self.settings['apn']
+        ptype = self.settings['pdptype']
         types = ['IP', 'IPV4V6', 'IPV6']
+
+        if ptype in types:
+            types.insert(0, ptype)
+        else:
+            ptype = None
+
         ctx = self.find_pdp(types, apn)
 
         if not ctx:
             ctx = [1, types[0], apn]
+            defpdp = True
+
+        if ptype and ptype != ctx[1]:
+            log.info('Overriding PDP type: "%s" -> "%s"', ctx[1], ptype)
+            ctx[1] = ptype
             defpdp = True
 
         if apn and apn != ctx[2]:
@@ -626,6 +639,10 @@ class Modem(object):
             return
 
         if setting == 'apn':
+            self.select_pdp()
+            return
+
+        if setting == 'pdptype':
             self.select_pdp()
             return
 
