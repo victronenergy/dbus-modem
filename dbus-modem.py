@@ -330,6 +330,7 @@ class Modem(object):
             defpdp = True
 
         if defpdp:
+            log.info('Defining PDP context: %d, %s, "%s"', *ctx)
             self.cmd(['AT+CGDCONT=%d,"%s","%s"' % (ctx[0], ctx[1], ctx[2])])
 
         self.pdp_cid = ctx[0]
