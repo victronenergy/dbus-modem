@@ -196,6 +196,7 @@ class Modem(object):
         self.gpio_save = ''
         self.pdp = []
         self.pdp_cid = None
+        self.pdp_act = []
 
     def error(self, msg):
         global mainloop
@@ -337,6 +338,10 @@ class Modem(object):
         self.update_connection()
 
     def handle_echo(self, cmd):
+        if cmd == '+CGACT?':
+            self.pdp_act = []
+            return
+
         if cmd == '+CGDCONT?':
             self.pdp = []
             return
@@ -425,6 +430,9 @@ class Modem(object):
         if cmd == '+CGACT':
             cid = int(v[0])
             act = int(v[1])
+
+            if act:
+                self.pdp_act.append(cid)
 
             if cid == self.pdp_cid:
                 self.dbus['/Connected'] = act
