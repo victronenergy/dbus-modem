@@ -184,6 +184,7 @@ class Modem(object):
         self.ser = None
         self.dev = dev
         self.rate = rate
+        self.line = None
         self.cmds = []
         self.lastcmd = None
         self.ready = False
@@ -209,6 +210,24 @@ class Modem(object):
         with self.cv:
             self.running = False
             self.cv.notify()
+
+    def readline(self):
+        if self.line is None:
+            self.line = bytearray()
+
+        while True:
+            c = self.ser.read()
+            if c == b'\n':
+                break
+            elif c:
+                self.line += c
+            else:
+                return None
+
+        r = self.line.strip().decode()
+        self.line = None
+
+        return r
 
     def send(self, cmd):
         self.lastcmd = cmd
@@ -529,7 +548,7 @@ class Modem(object):
                             self.cv.notify()
 
             try:
-                line = self.ser.readline().strip().decode()
+                line = self.readline()
             except serial.SerialException:
                 self.error('Read error')
                 break
