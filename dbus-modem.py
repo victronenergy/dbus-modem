@@ -282,11 +282,11 @@ class Modem(object):
             return
 
         self.cmd([
-            'AT+CREG?',
             'AT+COPS?',
             'AT+CNSMOD?',
             'AT+CSQ',
             'AT+CGACT?',
+            'AT+CREG?',
             'AT+CGPADDR',
         ], limit=True)
 
