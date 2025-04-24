@@ -243,9 +243,8 @@ class Modem(object):
         with self.lock:
             if limit and len(self.cmds) > CMDQ_MAX:
                 return
-            if self.ready and not self.cmds:
-                self.send(cmds.pop(0))
             self.cmds += cmds
+            self.ser.cancel_read()
 
     def modem_wait(self):
         try:
