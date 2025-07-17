@@ -324,6 +324,7 @@ class Modem(object):
         self.wdog ^= 1
 
     def select_pdp(self):
+        self.disconnect()
         self.pdp_cid = None
         self.cmd([
             'AT+CGACT?',
@@ -367,7 +368,6 @@ class Modem(object):
 
         self.pdp_cid = ctx[0]
         log.info('Using PDP context %d', self.pdp_cid)
-        self.disconnect()
         self.update_connection()
 
     def handle_echo(self, cmd):
