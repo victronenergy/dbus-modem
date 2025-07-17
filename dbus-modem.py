@@ -552,8 +552,7 @@ class Modem(object):
                 self.ready = True
                 continue
 
-            if line == 'NO CARRIER':
-                self.ready = True
+            if line == 'NO CARRIER' or line.startswith('+PPPD:'):
                 continue
 
             p = line.split(': ', 1)
