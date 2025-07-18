@@ -308,6 +308,7 @@ class Modem(object):
             'AT+CNSMOD?',
             'AT+CSQ',
             'AT+CGACT?',
+            'AT+CGATT?',
             'AT+CREG?',
             'AT+CGPADDR',
         ], limit=True)
@@ -327,6 +328,7 @@ class Modem(object):
         self.disconnect()
         self.pdp_cid = None
         self.cmd([
+            'AT+CGATT=0',
             'AT+CGACT?',
             'AT+CGDCONT?',
         ])
@@ -368,7 +370,7 @@ class Modem(object):
 
         self.pdp_cid = ctx[0]
         log.info('Using PDP context %d', self.pdp_cid)
-        self.update_connection()
+        self.cmd(['AT+CGATT=1'])
 
     def handle_echo(self, cmd):
         if cmd == '+CGACT?':
@@ -471,6 +473,16 @@ class Modem(object):
                 self.dbus['/Connected'] = act
             elif act:
                 self.cmd(['AT+CGACT=0,%d' % cid])
+
+            return
+
+        if cmd == '+CGATT':
+            att = int(v[0])
+
+            if att and self.pdp_cid is not None:
+                if self.pdp_cid not in self.pdp_act:
+                    self.cmd(['AT+CGACT=1,%d' % self.pdp_cid])
+                self.update_connection()
 
             return
 
