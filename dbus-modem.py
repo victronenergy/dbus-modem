@@ -471,7 +471,7 @@ class Modem(object):
 
             if cid == self.pdp_cid:
                 self.dbus['/Connected'] = act
-            elif act:
+            elif act and self.pdp_cid is not None:
                 self.cmd(['AT+CGACT=0,%d' % cid])
 
             return
