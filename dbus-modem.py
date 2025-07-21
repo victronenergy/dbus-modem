@@ -358,6 +358,9 @@ class Modem(object):
             ctx = self.pdp[i]
             act = ctx.cid in self.pdp_act
 
+            if ctx.emergency:
+                continue
+
             try:
                 pref = types.index(ctx.pdp_type)
             except ValueError:
