@@ -10,6 +10,7 @@ import sys
 import time
 import threading
 import traceback
+from typing import NamedTuple
 import serial
 from gi.repository import GLib
 import dbus
@@ -177,6 +178,23 @@ def make_chatscript(name, pdp):
     except Exception as e:
         log.error('Error writing chat script %s: %s', name, e)
 
+class PDPContext(NamedTuple):
+    cid: int
+    pdp_type: str
+    apn: str
+    pdp_addr: str = ''
+    d_comp: int = 0
+    h_comp: int = 0
+    ipv4_ctrl: int = 0
+    emergency: int = 0
+
+    @classmethod
+    def create(cls, *args):
+        return cls(int(args[0]), *args[1:4], *map(int, args[4:]))
+
+    def __str__(self):
+        return '{},"{}","{}","{}",{},{},{},{}'.format(*self)
+
 class Modem(object):
     def __init__(self, dev, rate):
         self.thread = None
@@ -338,16 +356,16 @@ class Modem(object):
 
         for i in range(len(self.pdp)):
             ctx = self.pdp[i]
-            act = ctx[0] in self.pdp_act
+            act = ctx.cid in self.pdp_act
 
             try:
-                pref = types.index(ctx[1])
+                pref = types.index(ctx.pdp_type)
             except ValueError:
                 pref = 1000
 
-            cl.append((not act, pref, ctx[2] != apn, i, ctx))
+            cl.append((not act, pref, ctx.apn != apn, i, ctx))
 
-        return list(min(cl)[-1]) if cl else None
+        return min(cl)[-1] if cl else None
 
     def update_pdp(self):
         defpdp = False
@@ -356,20 +374,20 @@ class Modem(object):
         ctx = self.find_pdp(types, apn)
 
         if not ctx:
-            ctx = [1, types[0], apn]
+            ctx = PDPContext.create(1, types[0], apn)
             defpdp = True
 
-        if apn and apn != ctx[2]:
-            log.info('Overriding APN: "%s" -> "%s"', ctx[2], apn)
-            ctx[2] = apn
+        if apn and apn != ctx.apn:
+            log.info('Overriding APN: "%s" -> "%s"', ctx.apn, apn)
+            ctx.apn = apn
             defpdp = True
 
         if defpdp:
-            log.info('Defining PDP context: %d, %s, "%s"', *ctx)
-            self.cmd(['AT+CGDCONT=%d,"%s","%s"' % (ctx[0], ctx[1], ctx[2])])
+            log.info('Defining PDP context: %s', ctx)
+            self.cmd(['AT+CGDCONT=%s' % ctx])
 
-        self.pdp_cid = ctx[0]
-        log.info('Using PDP context %d', self.pdp_cid)
+        log.info('Using PDP context %d', ctx.cid)
+        self.pdp_cid = ctx.cid
         self.cmd(['AT+CGATT=1'])
 
     def handle_echo(self, cmd):
@@ -487,11 +505,9 @@ class Modem(object):
             return
 
         if cmd == '+CGDCONT':
-            cid = int(v[0])
-            pdp_type = v[1]
-            apn = v[2]
-            self.pdp.append([cid, pdp_type, apn])
-            log.info('PDP context %d, %s, "%s"', cid, pdp_type, apn)
+            ctx = PDPContext.create(*v)
+            self.pdp.append(ctx)
+            log.info('PDP context %s', ctx)
             return
 
         if cmd == '+CGPADDR':
