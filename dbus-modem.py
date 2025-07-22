@@ -139,7 +139,10 @@ CPIN = {
 }
 
 def parse_ip(s):
-    x = bytes(map(int, s.split('.')))
+    try:
+        x = bytes(map(int, s.split('.')))
+    except:
+        return None
 
     if not any(x):
         return None
