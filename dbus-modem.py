@@ -520,10 +520,8 @@ class Modem(object):
             if act:
                 self.pdp_act.append(cid)
 
-            if cid == self.pdp_cid:
-                self.dbus['/Connected'] = act
-            elif act and self.pdp_cid is not None:
-                self.cmd(['AT+CGACT=0,%d' % cid])
+                if self.pdp_cid is not None and cid != self.pdp_cid:
+                    self.cmd(['AT+CGACT=0,%d' % cid])
 
             return
 
@@ -709,7 +707,9 @@ class Modem(object):
         return PPP_STATUS.INIT
 
     def check_ppp(self):
-        self.dbus['/PPPStatus'] = self.ppp_status()
+        st = self.ppp_status()
+        self.dbus['/PPPStatus'] = st
+        self.dbus['/Connected'] = st == PPP_STATUS.UP
 
     def setting_changed(self, setting, old, new):
         if not self.running:
