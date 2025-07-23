@@ -82,6 +82,15 @@ RegStatus | Description
 4 | unknown
 5 | registered, roaming
 
+### PPPStatus
+The PPPStatus value indicates the state of the PPP interface.
+
+PPPStatus | Description
+----------|------------
+0 | down, pppd stopped
+1 | init, pppd started, interface not configured
+2 | up, pppd running, interface configured
+
 ### Settings
 The following localsettings values are used. These are monitored and changes acted upon.
 

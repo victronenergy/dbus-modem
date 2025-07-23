@@ -138,6 +138,33 @@ CPIN = {
     'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
 }
 
+class PPP_STATUS(IntEnum):
+    DOWN            = 0
+    INIT            = 1
+    UP              = 2
+
+def check_route(ifname='ppp0', ipv6=False):
+    if ipv6:
+        proc = '/proc/net/ipv6_route'
+        name = 9
+        dest = 0
+    else:
+        proc = '/proc/net/route'
+        name = 0
+        dest = 1
+
+    try:
+        with open(proc) as f:
+            for line in f:
+                r = line.split()
+                if r[name] == ifname and int(r[dest], 16) == 0:
+                    return True
+    except:
+        traceback.print_exc()
+        pass
+
+    return False
+
 def parse_ip(s):
     try:
         x = bytes(map(int, s.split('.')))
@@ -669,6 +696,21 @@ class Modem(object):
         else:
             self.disconnect()
 
+    def ppp_status(self):
+        if not self.ppp:
+            return PPP_STATUS.DOWN
+
+        if check_route(ipv6=False):
+            return PPP_STATUS.UP
+
+        if check_route(ipv6=True):
+            return PPP_STATUS.UP
+
+        return PPP_STATUS.INIT
+
+    def check_ppp(self):
+        self.dbus['/PPPStatus'] = self.ppp_status()
+
     def setting_changed(self, setting, old, new):
         if not self.running:
             return
@@ -705,6 +747,7 @@ class Modem(object):
         self.dbus.add_path('/IP', None)
         self.dbus.add_path('/SimStatus', None)
         self.dbus.add_path('/RegStatus', None)
+        self.dbus.add_path('/PPPStatus', None)
         self.dbus.register()
 
         log.info('Waiting for localsettings')
@@ -734,6 +777,7 @@ class Modem(object):
         if self.running:
             self.modem_update()
             self.wdog_update()
+            self.check_ppp()
         return True
 
 def quit(n):
