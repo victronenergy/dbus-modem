@@ -709,7 +709,7 @@ class Modem(object):
     def check_ppp(self):
         st = self.ppp_status()
         self.dbus['/PPPStatus'] = st
-        self.dbus['/Connected'] = st == PPP_STATUS.UP
+        self.dbus['/Connected'] = int(st == PPP_STATUS.UP)
 
     def setting_changed(self, setting, old, new):
         if not self.running:
