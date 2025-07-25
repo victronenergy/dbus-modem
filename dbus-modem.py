@@ -40,6 +40,9 @@ CHAT_SCRIPT = '/run/ppp/chat'
 # file containing user/password for PPP authentication
 AUTH_FILE = '/run/ppp/auth'
 
+# time allowed for ppp interface to come up
+PPP_TIMEOUT = 60
+
 # max number of commands to queue
 CMDQ_MAX = 15
 
@@ -239,6 +242,7 @@ class Modem(object):
         self.registered = None
         self.roaming = None
         self.ppp = None
+        self.ppp_time = None
         self.sim_status = None
         self.wdog = 0
         self.gpio_save = ''
@@ -672,12 +676,14 @@ class Modem(object):
             make_chatscript(CHAT_SCRIPT, self.pdp_cid)
             ppp_service(True)
             self.ppp = True
+            self.ppp_time = time.time()
 
     def disconnect(self, force=False):
         if self.ppp or force:
             log.info('Stopping pppd')
             ppp_service(False)
             self.ppp = False
+            self.ppp_time = None
 
     def connect_allowed(self):
         if self.settings['connect']:
@@ -713,6 +719,10 @@ class Modem(object):
         st = self.ppp_status()
         self.dbus['/PPPStatus'] = st
         self.dbus['/Connected'] = int(st == PPP_STATUS.UP)
+
+        if self.ppp_time is not None and st != PPP_STATUS.UP:
+            if time.time() - self.ppp_time > PPP_TIMEOUT:
+                self.error('Timeout waiting for ppp')
 
     def setting_changed(self, setting, old, new):
         if not self.running:
