@@ -411,13 +411,14 @@ class Modem(object):
             defpdp = True
 
         if apn and apn != ctx.apn:
+            apn = apn.strip()
             log.info('Overriding APN: "%s" -> "%s"', ctx.apn, apn)
-            ctx.apn = apn
+            ctx = ctx._replace(apn=apn)
             defpdp = True
 
         if defpdp:
             log.info('Defining PDP context: %s', ctx)
-            self.cmd(['AT+CGDCONT=%s' % ctx])
+            self.cmd(['AT+CGDCONT=%s' % str(ctx)])
 
         log.info('Using PDP context %d', ctx.cid)
         self.pdp_cid = ctx.cid
