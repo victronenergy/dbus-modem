@@ -251,11 +251,14 @@ class Modem(object):
 
         log.error('%s, quitting' % msg)
 
-        mainloop.quit()
-        self.disconnect(True)
+        try:
+            mainloop.quit()
+            self.disconnect(True)
 
-        self.running = False
-        self.cmds.shutdown(True)
+            self.running = False
+            self.cmds.shutdown(True)
+        except:
+            quit(1)
 
     def readline(self):
         if self.line is None:
