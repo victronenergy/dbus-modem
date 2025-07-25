@@ -225,7 +225,8 @@ class PDPContext(NamedTuple):
         return '{},"{}","{}","{}",{},{},{},{}'.format(*self)
 
 class Modem(object):
-    def __init__(self, dev, rate):
+    def __init__(self, dev, rate, debug=0):
+        self.debug = debug
         self.thread = None
         self.ser = None
         self.dev = dev
@@ -731,6 +732,16 @@ class Modem(object):
             self.update_connection()
             return
 
+    def set_debug(self, path, val):
+        try:
+            self.debug = int(val)
+        except:
+            return False
+
+        log.setLevel(logging.DEBUG if self.debug else logging.INFO)
+
+        return True
+
     def start(self):
         # make sure pppd is not running
         self.disconnect(True)
@@ -747,6 +758,8 @@ class Modem(object):
         self.dbus.add_path('/SimStatus', None)
         self.dbus.add_path('/RegStatus', None)
         self.dbus.add_path('/PPPStatus', None)
+        self.dbus.add_path('/Debug', self.debug, writeable=True,
+                           onchangecallback=self.set_debug)
         self.dbus.register()
 
         log.info('Waiting for localsettings')
@@ -832,7 +845,7 @@ def main():
     signal.signal(signal.SIGINT, sigterm)
     signal.signal(signal.SIGTERM, sigterm)
 
-    modem = Modem(args.serial, rate)
+    modem = Modem(args.serial, rate, args.debug)
     if not modem.start():
         return
 
