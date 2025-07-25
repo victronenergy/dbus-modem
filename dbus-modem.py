@@ -160,8 +160,7 @@ def check_route(ifname='ppp0', ipv6=False):
                 if r[name] == ifname and int(r[dest], 16) == 0:
                     return True
     except:
-        traceback.print_exc()
-        pass
+        log.warning(traceback.format_exc())
 
     return False
 
@@ -655,15 +654,14 @@ class Modem(object):
                 else:
                     self.handle_resp(cmd, resp)
             except:
-                log.debug(traceback.format_exc())
-                pass
+                log.warning(traceback.format_exc())
 
             if line == 'OK':
                 self.ready = True
 
     def connect(self):
         if not self.ppp:
-            log.debug('Starting pppd')
+            log.info('Starting pppd')
             make_authfile(AUTH_FILE,
                           self.settings['user'],
                           self.settings['passwd'])
@@ -673,7 +671,7 @@ class Modem(object):
 
     def disconnect(self, force=False):
         if self.ppp or force:
-            log.debug('Stopping pppd')
+            log.info('Stopping pppd')
             ppp_service(False)
             self.ppp = False
 
