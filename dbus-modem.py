@@ -842,7 +842,8 @@ def main():
 
     quit(1)
 
-try:
-    main()
-except KeyboardInterrupt:
-    quit(1)
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        quit(1)
