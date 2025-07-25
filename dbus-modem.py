@@ -292,7 +292,7 @@ class Modem(object):
         try:
             for c in cmds:
                 self.cmds.put(c)
-        except queue.Shutdown:
+        except queue.ShutDown:
             pass
 
         self.ser.cancel_read()
@@ -607,7 +607,7 @@ class Modem(object):
                     self.cmds.task_done()
                 except queue.Empty:
                     pass
-                except queue.Shutdown:
+                except queue.ShutDown:
                     break
 
             try:
