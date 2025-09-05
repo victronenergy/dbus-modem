@@ -40,17 +40,22 @@ waiting for the first edge.
 The following read-only values are exported under the com.victronenergy.modem service:
 
 Path | Description
------|-------------
+-----|------------
 /Model | modem model
 /IMEI | International Mobile Equipment Identity
 /NetworkName | name of registered mobile network
 /NetworkType | type of mobile network (GSM, UMTS, ...)
 /SignalStrength | signal strength (0-31)
 /Roaming | currently roaming (0/1)
-/Connected | data link active (0/1)  (*)
+/Connected | data link (PPP) active (0/1) (*)
 /IP | IP address (when connected)
-/SimStatus | status code, see below
+/PPPStatus | status code, see below
 /RegStatus | status code, see below
+/SimStatus | status code, see below
+
+
+(*) The /Connected status returns 1 when PPPStatus is up. amd 0 otherwise. /Connected also is the path
+used by the gui to say Online / Offline.
 
 ### SimStatus
 The SimStatus value is either (if less than 1000) an error code as
@@ -88,8 +93,8 @@ The PPPStatus value indicates the state of the PPP interface.
 PPPStatus | Description
 ----------|------------
 0 | down, pppd stopped
-1 | init, pppd started, interface not configured
-2 | up, pppd running, interface configured
+1 | init, pppd started and ppp0 interface not configured
+2 | up, pppd running and ppp0 interface configured
 
 ### Settings
 The following localsettings values are used. These are monitored and changes acted upon.
