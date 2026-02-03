@@ -141,6 +141,7 @@ CPIN = {
     'PH-CORP PUK':    SIM_STATUS.PH_CORP_PUK
 }
 
+CGATT_RETRY_SECS = 30
 class PPP_STATUS(IntEnum):
     DOWN            = 0
     INIT            = 1
@@ -253,7 +254,7 @@ class Modem(object):
         self.cgreg_stat = None
         self.creg_stat = None
         self.packet_registered = False
-
+        self.last_cgatt_attach_try = 0
 
     def error(self, msg):
         global mainloop
@@ -435,7 +436,6 @@ class Modem(object):
 
         log.info('Using PDP context %d', ctx.cid)
         self.pdp_cid = ctx.cid
-        self.cmd(['AT+CGATT=1'])
 
     def handle_echo(self, cmd):
         if cmd == '+CGACT?':
@@ -449,6 +449,10 @@ class Modem(object):
     def handle_ok(self, cmd):
         if cmd == '+CGDCONT?':
             self.update_pdp()
+            return
+        # If we just issued AT+CGATT=1, re-check state
+        if cmd == '+CGATT=1':
+            self.cmd(['AT+CGATT?'], limit=False)
             return
 
     def handle_resp(self, cmd, resp):
@@ -551,6 +555,18 @@ class Modem(object):
 
         if cmd == '+CGATT':
             att = int(v[0])
+
+            if not self.ppp:
+                log.info('CGATT returned %d (pdp_cid=%s)', att, self.pdp_cid)
+
+            # If detached, try to attach (but don't spam, and don't do it once PPP started)
+            if att == 0 and not self.ppp:
+                now = time.time()
+                if now - self.last_cgatt_attach_try >= CGATT_RETRY_SECS:
+                    self.last_cgatt_attach_try = now
+                    log.info('CGATT=0 -> issuing AT+CGATT=1')
+                    self.cmd(['AT+CGATT=1'])
+                return
 
             if att and self.pdp_cid is not None:
                 if self.pdp_cid not in self.pdp_act:
