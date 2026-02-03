@@ -249,6 +249,11 @@ class Modem(object):
         self.pdp = []
         self.pdp_cid = None
         self.pdp_act = []
+        self.cereg_stat = None
+        self.cgreg_stat = None
+        self.creg_stat = None
+        self.packet_registered = False
+
 
     def error(self, msg):
         global mainloop
@@ -364,6 +369,8 @@ class Modem(object):
             'AT+CSQ',
             'AT+CGACT?',
             'AT+CGATT?',
+            'AT+CEREG?',
+            'AT+CGREG?',
             'AT+CREG?',
             'AT+CGPADDR',
         ], limit=True)
@@ -383,7 +390,6 @@ class Modem(object):
         self.disconnect()
         self.pdp_cid = None
         self.cmd([
-            'AT+CGATT=0',
             'AT+CGACT?',
             'AT+CGDCONT?',
         ])
@@ -487,26 +493,34 @@ class Modem(object):
         if cmd == '+CNSMOD':
             self.dbus['/NetworkType'] = NET_MODE[int(v[1])]
             return
+        
+        if cmd == '+CEREG':
+            stat = REG_STATUS.get(int(v[1]))
+            self.cereg_stat = stat
+            self.update_packet_registration()
+            if not self.ppp:
+                log.info('+CEREG status %s -> packet_registered=%s',
+                         stat.name if isinstance(stat, REG_STATUS) else stat,
+                         self.packet_registered)
+            return
+
+        if cmd == '+CGREG':
+            stat = REG_STATUS.get(int(v[1]))
+            self.cgreg_stat = stat
+            self.update_packet_registration()
+            if not self.ppp:
+                log.info('+CGREG status %s -> packet_registered=%s',
+                         stat.name if isinstance(stat, REG_STATUS) else stat,
+                         self.packet_registered)
+            return
 
         if cmd == '+CREG':
-            prev = self.registered
             stat = REG_STATUS.get(int(v[1]))
-
-            if stat == REG_STATUS.HOME:
-                self.registered = True
-                self.roaming = False
-            elif stat == REG_STATUS.ROAMING:
-                self.registered = True
-                self.roaming = True
-            else:
-                self.registered = False
-                self.roaming = False
-
-            if self.registered and not prev:
-                self.select_pdp()
-
-            self.dbus['/RegStatus'] = stat
-            self.dbus['/Roaming'] = self.roaming
+            self.creg_stat = stat
+            self.update_packet_registration()
+            if not self.ppp:
+                log.info('+CREG status %s (informational/legacy)',
+                         stat.name if isinstance(stat, REG_STATUS) else stat)
             return
 
         if cmd == '+COPS':
@@ -530,6 +544,8 @@ class Modem(object):
 
                 if self.pdp_cid is not None and cid != self.pdp_cid:
                     self.cmd(['AT+CGACT=0,%d' % cid])
+                if cid == self.pdp_cid:
+                    self.update_connection()
 
             return
 
@@ -546,7 +562,15 @@ class Modem(object):
         if cmd == '+CGDCONT':
             ctx = PDPContext.create(*v)
             self.pdp.append(ctx)
-            log.info('PDP context %s', ctx)
+
+            act = 'ACTIVE' if ctx.cid in self.pdp_act else 'inactive'
+            log.info(
+                'PDP context %d (%s): type=%s apn="%s" addr=%s',
+                 ctx.cid,
+                 act,
+                 ctx.pdp_type,
+                 ctx.apn,
+                 ctx.pdp_addr)
             return
 
         if cmd == '+CGPADDR':
@@ -564,6 +588,42 @@ class Modem(object):
             if int(v[0]) != 1:
                 self.cmd(['AT+CGPS=1'])
             return
+
+    def update_packet_registration(self):
+        cereg_ok = self.cereg_stat in (REG_STATUS.HOME, REG_STATUS.ROAMING)
+        cgreg_ok = self.cgreg_stat in (REG_STATUS.HOME, REG_STATUS.ROAMING)
+        new_status = cereg_ok or cgreg_ok
+
+        # Track "how long we've been UNregistered" (only meaningful when False)
+        if self.packet_registered != new_status:
+            self.packet_registered = new_status
+
+            if new_status:
+                if self.pdp_cid is None:
+                    self.select_pdp() 
+            else:
+                log.info('Packet unregistered')
+
+        # Keep legacy 'registered' in sync, but treat it as "packet registered"
+        self.registered = self.packet_registered
+
+        # Choose what we expose on /RegStatus (packet-focused)
+        if cereg_ok:
+            reg_status = self.cereg_stat
+        elif cgreg_ok:
+            reg_status = self.cgreg_stat
+        elif self.cereg_stat is not None:
+            reg_status = self.cereg_stat
+        elif self.cgreg_stat is not None:
+            reg_status = self.cgreg_stat
+        else:
+            reg_status = REG_STATUS.UNKNOWN
+
+        self.dbus['/RegStatus'] = reg_status
+
+        roaming = (reg_status == REG_STATUS.ROAMING)
+        self.roaming = roaming
+        self.dbus['/Roaming'] = roaming
 
     def handle_error(self, cmd, err):
         v = err.split(': ', 1)
