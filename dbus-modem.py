@@ -253,6 +253,7 @@ class Modem(object):
         self.cereg_stat = None
         self.cgreg_stat = None
         self.creg_stat = None
+        self.cgatt_attached = None
         self.packet_registered = False
         self.last_cgatt_attach_try = 0
 
@@ -555,6 +556,8 @@ class Modem(object):
 
         if cmd == '+CGATT':
             att = int(v[0])
+            self.cgatt_attached = bool(att)
+            self.update_packet_registration()
 
             if not self.ppp:
                 log.info('CGATT returned %d (pdp_cid=%s)', att, self.pdp_cid)
@@ -608,7 +611,7 @@ class Modem(object):
     def update_packet_registration(self):
         cereg_ok = self.cereg_stat in (REG_STATUS.HOME, REG_STATUS.ROAMING)
         cgreg_ok = self.cgreg_stat in (REG_STATUS.HOME, REG_STATUS.ROAMING)
-        new_status = cereg_ok or cgreg_ok
+        new_status = cereg_ok or cgreg_ok or (self.cgatt_attached is True)
 
         # Track "how long we've been UNregistered" (only meaningful when False)
         if self.packet_registered != new_status:
