@@ -364,7 +364,7 @@ class Modem(object):
             'AT+CSQ',
             'AT+CGACT?',
             'AT+CGATT?',
-            'AT+CREG?',
+            'AT+CGREG?',
             'AT+CGPADDR',
         ], limit=True)
 
@@ -488,7 +488,7 @@ class Modem(object):
             self.dbus['/NetworkType'] = NET_MODE[int(v[1])]
             return
 
-        if cmd == '+CREG':
+        if cmd == '+CGREG':
             prev = self.registered
             stat = REG_STATUS.get(int(v[1]))
 
