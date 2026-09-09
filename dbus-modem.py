@@ -398,6 +398,9 @@ class Modem(object):
             if ctx.emergency:
                 continue
 
+            if ctx.apn == "ims":
+                continue
+
             try:
                 pref = types.index(ctx.pdp_type)
             except ValueError:
