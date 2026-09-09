@@ -249,6 +249,7 @@ class Modem(object):
         self.pdp = []
         self.pdp_cid = None
         self.pdp_act = []
+        self.pdp_try = []
 
     def error(self, msg):
         global mainloop
@@ -382,6 +383,7 @@ class Modem(object):
     def select_pdp(self):
         self.disconnect()
         self.pdp_cid = None
+        self.pdp_try = []
         self.cmd([
             'AT+CGATT=0',
             'AT+CGACT?',
@@ -408,15 +410,21 @@ class Modem(object):
 
             cl.append((not act, pref, ctx.apn != apn, i, ctx))
 
-        return min(cl)[-1] if cl else None
+        cl.sort()
+
+        return [x[-1] for x in cl]
 
     def update_pdp(self):
         defpdp = False
         apn = self.settings['apn']
         types = ['IP', 'IPV4V6', 'IPV6']
-        ctx = self.find_pdp(types, apn)
 
-        if not ctx:
+        if not self.pdp_try:
+            self.pdp_try = self.find_pdp(types, apn)
+
+        if self.pdp_try:
+            ctx = self.pdp_try.pop(0)
+        else:
             ctx = PDPContext.create(1, types[0], apn)
             defpdp = True
 
@@ -430,7 +438,7 @@ class Modem(object):
             log.info('Defining PDP context: %s', ctx)
             self.cmd(['AT+CGDCONT=%s' % str(ctx)])
 
-        log.info('Using PDP context %d', ctx.cid)
+        log.info('Trying PDP context %d', ctx.cid)
         self.pdp_cid = ctx.cid
         self.cmd(['AT+CGATT=1'])
 
@@ -646,6 +654,9 @@ class Modem(object):
                 continue
 
             if line == 'NO CARRIER' or line.startswith('+PPPD:'):
+                if self.ppp and self.pdp_try:
+                    self.disconnect()
+                    self.update_pdp()
                 continue
 
             p = line.split(': ', 1)
@@ -725,7 +736,10 @@ class Modem(object):
 
         if self.ppp_time is not None and st != PPP_STATUS.UP:
             if time.time() - self.ppp_time > PPP_TIMEOUT:
-                self.error('Timeout waiting for ppp')
+                if self.pdp_try:
+                    self.update_pdp()
+                else:
+                    self.error('Timeout waiting for ppp')
 
     def setting_changed(self, setting, old, new):
         if not self.running:
